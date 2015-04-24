@@ -141,3 +141,4 @@ except ImportError:
 MODULESTORE = convert_module_store_setting_if_needed(MODULESTORE)
 
 SECRET_KEY = '85920908f28904ed733fe576320db18cabd7b6cd'
+

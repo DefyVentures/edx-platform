@@ -13,7 +13,8 @@ from django.http import (
     HttpResponseBadRequest, HttpResponseForbidden, Http404
 )
 from django.utils.translation import ugettext as _
-from commerce.api import EcommerceAPI
+
+from commerce import ecommerce_api_client
 from commerce.exceptions import InvalidConfigurationError, ApiError
 from commerce.http import InternalRequestErrorResponse
 from course_modes.models import CourseMode
@@ -665,11 +666,7 @@ def _get_verify_flow_redirect(order):
                 order.id, cert_items[0].course_id
             )
 
-        course_id = cert_items[0].course_id
-        url = reverse(
-            'verify_student_payment_confirmation',
-            kwargs={'course_id': unicode(course_id)}
-        )
+        url = reverse('commerce:checkout_receipt')
         # Add a query string param for the order ID
         # This allows the view to query for the receipt information later.
         url += '?payment-order-num={order_num}'.format(order_num=order.id)
@@ -858,8 +855,8 @@ def _get_external_order(request, order_number):
 
     """
     try:
-        api = EcommerceAPI()
-        order_number, order_status, order_data = api.get_order(request.user, order_number)
+        api = ecommerce_api_client(request.user)
+        order_number, order_status, order_data = api.get_order(order_number)
         billing = order_data.get('billing_address', {})
         country = billing.get('country', {})
 
@@ -946,7 +943,8 @@ def _show_receipt_json(order):
                 'quantity': item.qty,
                 'unit_cost': item.unit_cost,
                 'line_cost': item.line_cost,
-                'line_desc': item.line_desc
+                'line_desc': item.line_desc,
+                'course_key': unicode(getattr(item, 'course_id'))
             }
             for item in OrderItem.objects.filter(order=order).select_subclasses()
         ]

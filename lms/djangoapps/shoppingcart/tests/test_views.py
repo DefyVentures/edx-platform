@@ -3,6 +3,7 @@ Tests for Shopping Cart views
 """
 from collections import OrderedDict
 import copy
+from ecommerce_api_client.client import EcommerceApiClient
 import mock
 import pytz
 from urlparse import urlparse
@@ -29,7 +30,7 @@ import ddt
 
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
-from commerce.api import EcommerceAPI
+
 from commerce.constants import OrderStatus
 from commerce.tests import EcommerceApiTestMixin
 from student.roles import CourseSalesAdminRole
@@ -915,7 +916,7 @@ class ShoppingCartViewsTests(ModuleStoreTestCase):
             })
 
     class mock_get_order(object):  # pylint: disable=invalid-name
-        """Mocks calls to EcommerceAPI.get_order. """
+        """Mocks calls to E-Commerce API client order retrieval method. """
         patch = None
 
         ORDER = {
@@ -965,7 +966,7 @@ class ShoppingCartViewsTests(ModuleStoreTestCase):
 
             default_kwargs.update(kwargs)
 
-            self.patch = mock.patch.object(EcommerceAPI, 'get_order', mock.Mock(**default_kwargs))
+            self.patch = mock.patch.object(EcommerceApiClient, 'get_order', mock.Mock(**default_kwargs))
 
         def __enter__(self):
             self.patch.start()
@@ -1470,10 +1471,7 @@ class ReceiptRedirectTest(ModuleStoreTestCase):
 
         # Expect to be redirected to the payment confirmation
         # page in the verify_student app
-        redirect_url = reverse(
-            'verify_student_payment_confirmation',
-            kwargs={'course_id': unicode(self.course_key)}
-        )
+        redirect_url = reverse('commerce:checkout_receipt')
         redirect_url += '?payment-order-num={order_num}'.format(
             order_num=self.cart.id
         )

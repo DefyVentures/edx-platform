@@ -1,11 +1,10 @@
 """ Commerce app tests package. """
 import json
 
+from ecommerce_api_client.client import EcommerceApiClient
 import httpretty
 import jwt
 import mock
-
-from commerce.api import EcommerceAPI
 
 
 class EcommerceApiTestMixin(object):
@@ -24,7 +23,7 @@ class EcommerceApiTestMixin(object):
     ORDER_DATA = {'number': ORDER_NUMBER}
     ECOMMERCE_API_SUCCESSFUL_BODY = {
         'id': BASKET_ID,
-        'order': {'number': ORDER_NUMBER},   # never both None.
+        'order': {'number': ORDER_NUMBER},  # never both None.
         'payment_data': PAYMENT_DATA,
     }
     ECOMMERCE_API_SUCCESSFUL_BODY_JSON = json.dumps(ECOMMERCE_API_SUCCESSFUL_BODY)  # pylint: disable=invalid-name
@@ -61,17 +60,18 @@ class EcommerceApiTestMixin(object):
             else:
                 response_data['order'] = {'number': self.ORDER_NUMBER}
             body = json.dumps(response_data)
-        httpretty.register_uri(httpretty.POST, url, status=status, body=body)
+        httpretty.register_uri(httpretty.POST, url, status=status, body=body,
+                               adding_headers={'Content-Type': 'application/json'})
 
-    class mock_create_basket(object):    # pylint: disable=invalid-name
-        """ Mocks calls to EcommerceAPI.create_basket. """
+    class mock_create_basket(object):  # pylint: disable=invalid-name
+        """ Mocks calls to E-Commerce API client basket creation method. """
 
         patch = None
 
         def __init__(self, **kwargs):
             default_kwargs = {'return_value': EcommerceApiTestMixin.ECOMMERCE_API_SUCCESSFUL_BODY}
             default_kwargs.update(kwargs)
-            self.patch = mock.patch.object(EcommerceAPI, 'create_basket', mock.Mock(**default_kwargs))
+            self.patch = mock.patch.object(EcommerceApiClient, 'create_basket', mock.Mock(**default_kwargs))
 
         def __enter__(self):
             self.patch.start()

@@ -2,25 +2,30 @@
 import logging
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import csrf_exempt
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.status import HTTP_406_NOT_ACCEPTABLE, HTTP_409_CONFLICT
 from rest_framework.views import APIView
+from slumber.exceptions import HttpNotFoundError, SlumberBaseException
 
-from commerce.api import EcommerceAPI
+from commerce import ecommerce_api_client
 from commerce.constants import Messages
-from commerce.exceptions import ApiError, InvalidConfigurationError, InvalidResponseError
-from commerce.http import DetailResponse, InternalRequestErrorResponse
+from commerce.exceptions import InvalidResponseError
+from commerce.http import DetailResponse
 from course_modes.models import CourseMode
 from courseware import courses
 from edxmako.shortcuts import render_to_response
 from enrollment.api import add_enrollment
 from microsite_configuration import microsite
-from openedx.core.lib.api.authentication import SessionAuthenticationAllowInactiveUser
 from student.models import CourseEnrollment
+from openedx.core.lib.api.authentication import SessionAuthenticationAllowInactiveUser
 from util.json_request import JsonResponse
+from verify_student.models import SoftwareSecurePhotoVerification
 
 
 log = logging.getLogger(__name__)
@@ -92,22 +97,12 @@ class BasketsView(APIView):
             self._enroll(course_key, user)
             return DetailResponse(msg)
 
-        # Setup the API and report any errors if settings are not valid.
-        try:
-            api = EcommerceAPI()
-        except InvalidConfigurationError:
-            self._enroll(course_key, user)
-            msg = Messages.NO_ECOM_API.format(username=user.username, course_id=unicode(course_key))
-            log.debug(msg)
-            return DetailResponse(msg)
+        # Setup the API
+        api = ecommerce_api_client(user)
 
         # Make the API call
         try:
-            response_data = api.create_basket(
-                user,
-                honor_mode.sku,
-                payment_processor="cybersource",
-            )
+            response_data = api.create_basket(honor_mode.sku, payment_processor="cybersource")
             payment_data = response_data["payment_data"]
             if payment_data is not None:
                 # it is time to start the payment flow.
@@ -128,9 +123,8 @@ class BasketsView(APIView):
                     {'username': user.id, 'course_id': course_id},
                 )
                 raise InvalidResponseError(msg)
-        except ApiError as err:
-            # The API will handle logging of the error.
-            return InternalRequestErrorResponse(err.message)
+        except SlumberBaseException:
+            log.exception()
 
 
 @cache_page(1800)
@@ -138,3 +132,29 @@ def checkout_cancel(_request):
     """ Checkout/payment cancellation view. """
     context = {'payment_support_email': microsite.get_value('payment_support_email', settings.PAYMENT_SUPPORT_EMAIL)}
     return render_to_response("commerce/checkout_cancel.html", context)
+
+
+@csrf_exempt
+@login_required
+def checkout_receipt(request):
+    """ Receipt view. """
+    context = {
+        'platform_name': microsite.get_value('platform_name', settings.PLATFORM_NAME),
+        'verified': SoftwareSecurePhotoVerification.verification_valid_or_pending(request.user).exists()
+    }
+    return render_to_response('commerce/checkout_receipt.html', context)
+
+
+class BasketOrderView(APIView):
+    """ Retrieve the order associated with a basket. """
+
+    authentication_classes = (SessionAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *_args, **kwargs):
+        """ HTTP handler. """
+        try:
+            order = ecommerce_api_client(request.user).get_basket_order(kwargs['basket_id'])
+            return JsonResponse(order)
+        except HttpNotFoundError:
+            return JsonResponse(status=404)
