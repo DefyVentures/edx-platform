@@ -34,19 +34,21 @@ def assert_event_matches(expected, actual, strict=False):
         assert_event_matches(expected, actual, strict=False)  # This will not raise an AssertionError
         assert_event_matches(expected, actual, strict=True)   # This *will* raise an AssertionError
     """
-    errors = _compare_trees(expected, actual, strict, [])
-    if len(errors) > 0:
+    differences = compare_events(expected, actual, strict)
+    if len(differences) > 0:
         debug_info = [
             'Expected:',
-            pprint.pformat(expected),
+            get_pretty_event_string(expected),
             'Actual:',
-            pprint.pformat(actual),
+            get_pretty_event_string(actual),
         ]
-        raise AssertionError('Unexpected event differences found:\n' + '\n'.join(errors + debug_info))
+        raise AssertionError('Unexpected event differences found:\n' + '\n'.join(differences + debug_info))
 
 
-def _compare_trees(expected, actual, strict, path):
-    errors = []
+def check_event_match(expected, actual, strict, path=None):
+    if path is None:
+        path = []
+    differences = []
 
     # Some events store their payload in a JSON string instead of a dict. Comparing these strings can be problematic
     # since the keys may be in different orders, so we parse the string here if we were expecting a dict.
@@ -58,24 +60,33 @@ def _compare_trees(expected, actual, strict, path):
         actual_keys = frozenset(actual.keys())
 
         for key in (expected_keys - actual_keys):
-            errors.append('Expected key "{0}" not found in actual'.format(_path_to_string(path + [key])))
+            differences.append('Expected key "{0}" not found in actual'.format(_path_to_string(path + [key])))
 
         if strict:
             for key in (actual_keys - expected_keys):
-                errors.append('Actual key "{0}" was unexpected and this is a strict comparison'.format(_path_to_string(path + [key])))
+                differences.append('Actual key "{0}" was unexpected and this is a strict comparison'.format(_path_to_string(path + [key])))
 
         for key in (expected_keys & actual_keys):
-            child_errors = _compare_trees(expected[key], actual[key], strict, path + [key])
-            errors.extend(child_errors)
+            child_differences = check_event_match(expected[key], actual[key], strict, path + [key])
+            differences.extend(child_differences)
 
     elif expected != actual:
-        errors.append('Values are not equal at "{path}": expected="{a}" and actual="{b}"'.format(
+        differences.append('Values are not equal at "{path}": expected="{a}" and actual="{b}"'.format(
             path=_path_to_string(path),
             a=expected,
             b=actual
         ))
 
-    return errors
+    return differences
+
+
+def is_matching_event(expected_event, actual_event):
+    return len(check_event_match(expected_event, actual_event)) == 0
+
+
+def get_pretty_event_string(event):
+    return pprint.pformat(event)
+
 
 def _path_to_string(path):
     return '.'.join(path)

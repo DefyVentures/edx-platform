@@ -23,26 +23,20 @@ class VideoEventsTest(EventsTestMixin, VideoBaseTest):
         And a "play_video" event is emitted
         And a "pause_video" event is emitted
         """
-        load_video_promise = self.create_event_of_type_promise('load_video')
-
         self.navigate_to_video()
 
-        load_video_event = load_video_promise.fulfill()
+        load_video_event = self.wait_for_event_of_type('load_video')
 
         self.assert_payload_contains_ids(load_video_event)
-        assert_event_matches({'event_type': 'load_video'}, load_video_event)
-
-        play_video_promise = self.create_event_of_type_promise('play_video')
-        pause_video_promise = self.create_event_of_type_promise('pause_video')
 
         self.video.click_player_button('play')
         self.video.wait_for_position('0:05')
         self.video.click_player_button('pause')
 
-        play_video_event = play_video_promise.fulfill()
+        play_video_event = self.wait_for_event_of_type('play_video')
         self.assert_valid_control_event_at_time(play_video_event, 0)
 
-        pause_video_event = pause_video_promise.fulfill()
+        pause_video_event = self.wait_for_event_of_type('pause_video')
         self.assert_valid_control_event_at_time(pause_video_event, self.video.seconds)
 
     def assert_payload_contains_ids(self, video_event):
@@ -82,7 +76,7 @@ class VideoEventsTest(EventsTestMixin, VideoBaseTest):
 
         self.navigate_to_video()
 
-        load_video_event = self.create_event_of_type_promise('load_video').fulfill()
+        load_video_event = self.wait_for_event_of_type('load_video')
 
         # Validate the event payload
         self.assert_payload_contains_ids(load_video_event)
