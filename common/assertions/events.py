@@ -34,7 +34,7 @@ def assert_event_matches(expected, actual, strict=False):
         assert_event_matches(expected, actual, strict=False)  # This will not raise an AssertionError
         assert_event_matches(expected, actual, strict=True)   # This *will* raise an AssertionError
     """
-    differences = compare_events(expected, actual, strict)
+    differences = check_event_match(expected, actual, strict)
     if len(differences) > 0:
         debug_info = [
             'Expected:',
@@ -45,7 +45,7 @@ def assert_event_matches(expected, actual, strict=False):
         raise AssertionError('Unexpected event differences found:\n' + '\n'.join(differences + debug_info))
 
 
-def check_event_match(expected, actual, strict, path=None):
+def check_event_match(expected, actual, strict=False, path=None):
     if path is None:
         path = []
     differences = []
@@ -80,8 +80,8 @@ def check_event_match(expected, actual, strict, path=None):
     return differences
 
 
-def is_matching_event(expected_event, actual_event):
-    return len(check_event_match(expected_event, actual_event)) == 0
+def is_matching_event(expected_event, actual_event, strict=False):
+    return len(check_event_match(expected_event, actual_event, strict=strict)) == 0
 
 
 def get_pretty_event_string(event):

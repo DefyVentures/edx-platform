@@ -23,21 +23,27 @@ class VideoEventsTest(EventsTestMixin, VideoBaseTest):
         And a "play_video" event is emitted
         And a "pause_video" event is emitted
         """
-        self.navigate_to_video()
 
-        load_video_event = self.wait_for_event_of_type('load_video')
+        def is_video_event(event):
+            return event['event_type'] in ('load_video', 'play_video', 'pause_video')
 
-        self.assert_payload_contains_ids(load_video_event)
+        captured_events = []
+        with self.capture_events(is_video_event, number_of_matches=3, captured_events=captured_events):
+            self.navigate_to_video()
+            self.video.click_player_button('play')
+            self.video.wait_for_position('0:05')
+            self.video.click_player_button('pause')
 
-        self.video.click_player_button('play')
-        self.video.wait_for_position('0:05')
-        self.video.click_player_button('pause')
-
-        play_video_event = self.wait_for_event_of_type('play_video')
-        self.assert_valid_control_event_at_time(play_video_event, 0)
-
-        pause_video_event = self.wait_for_event_of_type('pause_video')
-        self.assert_valid_control_event_at_time(pause_video_event, self.video.seconds)
+        for idx, video_event in enumerate(captured_events):
+            self.assert_payload_contains_ids(video_event)
+            if idx == 0:
+                assert_event_matches({'event_type': 'load_video'}, video_event)
+            elif idx == 1:
+                assert_event_matches({'event_type': 'play_video'}, video_event)
+                self.assert_valid_control_event_at_time(video_event, 0)
+            elif idx == 2:
+                assert_event_matches({'event_type': 'pause_video'}, video_event)
+                self.assert_valid_control_event_at_time(video_event, self.video.seconds)
 
     def assert_payload_contains_ids(self, video_event):
         """
@@ -63,7 +69,6 @@ class VideoEventsTest(EventsTestMixin, VideoBaseTest):
 
         This function asserts that those fields are present and have correct values.
         """
-        self.assert_payload_contains_ids(video_event)
         current_time = json.loads(video_event['event'])['currentTime']
         self.assertAlmostEqual(current_time, time_in_seconds, delta=0.5)
 
@@ -74,9 +79,11 @@ class VideoEventsTest(EventsTestMixin, VideoBaseTest):
         level fields are added to all events.
         """
 
-        self.navigate_to_video()
+        captured_events = []
+        with self.capture_events(lambda e: e['event_type'] == 'load_video', captured_events=captured_events):
+            self.navigate_to_video()
 
-        load_video_event = self.wait_for_event_of_type('load_video')
+        load_video_event = captured_events[0]
 
         # Validate the event payload
         self.assert_payload_contains_ids(load_video_event)

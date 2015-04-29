@@ -306,7 +306,7 @@ class EventsTestMixin(object):
         Resets all event tracking so that previously captured events are removed.
         """
         self.event_collection.drop()
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now()
 
     def get_matching_events(self, username, event_type):
         """
@@ -356,146 +356,59 @@ class EventsTestMixin(object):
                     "Refer '{0}' does not have correct suffix, '{1}'.".format(actual_referer, expected_referers[index])
                 )
 
-    def wait_for_event(self, check_event_func, description, **kwargs):
-        """
-        Return the first event emitted for which `check_event_func` returns `True`.
+    @contextmanager
+    def capture_events(self, event_filter=None, number_of_matches=1, captured_events=None):
+        start_time = datetime.utcnow()
 
-        Note that `check_event_func` will be called on all events emitted after this moment in time.
-        """
-        start_time = kwargs.pop('start_time', None)
-        if start_time is None:
-            start_time = self.start_time
+        yield
 
-        return EventPromise(
-            self.event_collection,
-            start_time,
-            check_event_func,
-            description,
-            **kwargs
+        def has_matching_events():
+            matching_events = self.get_matching_events_from_time(start_time=start_time, event_filter=event_filter)
+            return (len(matching_events) >= number_of_matches, matching_events)
+
+        events = Promise(
+            has_matching_events,
+            'Waiting for {number_of_matches} events to match the filter.'.format(
+                number_of_matches=number_of_matches
+            )
         ).fulfill()
 
-    def wait_for_matching_event(self, expected_event, **kwargs):
-        description = kwargs.pop('description', None)
-        if not description:
-            description = 'Waiting for an event to match the following expectation:\n{0}'.format(
-                get_pretty_event_string(expected_event)
-            )
-        return self.wait_for_event(
-            functools.partial(is_matching_event, expected_event),
-            description,
-            **kwargs
-        )
+        if captured_events is not None and hasattr(captured_events, 'append') and callable(captured_events.append):
+            for event in events:
+                captured_events.append(event)
 
-    def wait_for_event_of_type(self, event_type, **kwargs):
-        """
-        Return the first event emitted with the given `event_type`.
-
-        Note that this does not de-duplicate events, so code like this will not do what you expect::
-
-            promise_a = self.create_event_of_type_promise('foobar')
-            promise_b = self.create_event_of_type_promise('foobar')
-            event_a = promise_a.fulfill()
-            event_b = promise_b.fulfill()
-
-            assert event_a == event_b  # this is true! both of these promises return the first matching event!
-
-        If you want to distinguish between the two "foobar" events it is recommended that you use `create_event_promise`
-        and specify a more rigorous function for checking if you have found the correct event.
-
-        This function is designed for cases when only one event of a particular type will be emitted on a page.
-
-        """
-        description = kwargs.pop('description', None)
-        if not description:
-            description = 'Waiting for a {0} event to be emitted'.format(event_type)
-        return self.wait_for_matching_event(
-            {'event_type': event_type},
-            description=description,
-            **kwargs
-        )
-
-    def assert_no_matching_events_emitted(self, expected_event, start_time=None):
+    def get_matching_events_from_time(self, start_time=None, event_filter=None):
         if start_time is None:
             start_time = self.start_time
 
-        cursor = self.event_collection.find({
-            "time": {"$gt": self.start_time},
-        })
-        for event in cursor:
-            del event['_id']
-            if is_matching_event(expected_event, event):
-                message = [
-                    'Matching event found',
-                    'Expected:',
-                    get_pretty_event_string(expected_event),
-                    'Actual:',
-                    get_pretty_event_string(event)
-                ]
-                self.fail('\n'.join(message))
+        if isinstance(event_filter, dict):
+            event_filter = functools.partial(is_matching_event, event_filter)
+        elif not callable(event_filter):
+            raise ValueError(
+                'event_filter must either be a dict or a callable function with as single "event" parameter that '
+                'returns a boolean value.'
+            )
 
-    @contextmanager
-    def no_matching_events_emitted(self, expected_event):
-        start_time = datetime.utcnow()
-        yield
-        self.assert_no_matching_events_emitted(expected_event, start_time=start_time)
-
-    @contextmanager
-    def matching_event_emitted(self, expected_event):
-        start_time = datetime.utcnow()
-        yield
-        self.wait_for_matching_event(expected_event, start_time=start_time)
-
-
-class EventPromise(Promise):
-    """
-    A promise that is fulfilled when an event results in `check_event_func(event)` returning True.
-
-    Note that `check_event_func` should be specific enough to uniquely identify the event of interest.
-    """
-
-    def __init__(self, event_collection, start_time, check_event_func, description, **kwargs):
-        super(EventPromise, self).__init__(
-            check_func=self.get_event,
-            description=description,
-            **kwargs
-        )
-        self._check_event_func = check_event_func
-        self._event_collection = event_collection
-        self._start_time = start_time
-        self._from_time = start_time
-
-    def __str__(self):
-        description = [
-            super(EventPromise, self).__str__(),
-            'Events emitted recently:'
-        ]
-        cursor = self._event_collection.find(
+        matching_events = []
+        cursor = self.event_collection.find(
             {
-                "time": {"$gte": self._start_time},
+                "time": {
+                    "$gte": start_time
+                }
             }
-        ).sort('time', ASCENDING)
+        ).sort("time", ASCENDING)
         for event in cursor:
-            del event['_id']
-            description.append(get_pretty_event_string(event))
-        return '\n'.join(description)
-
-    def get_event(self):
-        cursor = self._event_collection.find(
-            {
-                "time": {"$gte": self._from_time},
-            }
-        ).sort('time', ASCENDING)
-        for event in cursor:
+            matches = False
             try:
                 del event['_id']
-                if self._check_event_func(event):
-                    return (True, event)
-            except Exception:  # pylint: disable=bare-except
+                if event_filter is not None:
+                    matches = event_filter(event)
+            except AssertionError:
                 continue
-
-        self._from_time = datetime.utcnow()
-
-        return (False, None)
+            else:
+                if matches is None or matches:
+                    matching_events.append(event)
+        return matching_events
 
 
 class UniqueCourseTest(WebAppTest):
