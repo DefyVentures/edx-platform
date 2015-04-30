@@ -14,12 +14,15 @@ from bok_choy.web_app_test import WebAppTest
 from bok_choy.promise import EmptyPromise, Promise
 from opaque_keys.edx.locator import CourseLocator
 from pymongo import MongoClient, ASCENDING
-from common.assertions.events import is_matching_event, get_pretty_event_string
+from common.assertions.events import assert_event_matches, get_pretty_event_string, is_matching_event
 from xmodule.partitions.partitions import UserPartition
 from xmodule.partitions.tests.test_partitions import MockUserPartitionScheme
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+
+from ..pages.common import BASE_URL
 
 
 def skip_if_browser(browser):
@@ -362,20 +365,27 @@ class EventsTestMixin(object):
 
         yield
 
+        events = self.wait_for_events(
+            start_time=start_time, event_filter=event_filter, number_of_matches=number_of_matches)
+
+        if captured_events is not None and hasattr(captured_events, 'append') and callable(captured_events.append):
+            for event in events:
+                captured_events.append(event)
+
+    def wait_for_events(self, start_time=None, event_filter=None, number_of_matches=1):
+        if start_time is None:
+            start_time = self.start_time
+
         def has_matching_events():
             matching_events = self.get_matching_events_from_time(start_time=start_time, event_filter=event_filter)
             return (len(matching_events) >= number_of_matches, matching_events)
 
-        events = Promise(
+        return Promise(
             has_matching_events,
             'Waiting for {number_of_matches} events to match the filter.'.format(
                 number_of_matches=number_of_matches
             )
         ).fulfill()
-
-        if captured_events is not None and hasattr(captured_events, 'append') and callable(captured_events.append):
-            for event in events:
-                captured_events.append(event)
 
     def get_matching_events_from_time(self, start_time=None, event_filter=None):
         if start_time is None:
@@ -409,6 +419,31 @@ class EventsTestMixin(object):
                 if matches is None or matches:
                     matching_events.append(event)
         return matching_events
+
+    @contextmanager
+    def assert_matching_events_emitted(self, event_filter, num_events=1):
+        with self.capture_events(event_filter, num_events, []):
+            yield
+
+    def assert_event_sequences_match(self, expected_events, actual_events):
+        for expected_event, actual_event in zip(expected_events, actual_events):
+            assert_event_matches(expected_event, actual_event)
+
+    def assert_no_matching_events_emitted(self, event_filter):
+        matching_events = self.get_matching_events_from_time(event_filter=event_filter)
+        failure_message = [
+            'Matching events were emitted.',
+            'Event Filter:',
+            get_pretty_event_string(event_filter),
+            'Matching Events:',
+        ]
+        for event in matching_events:
+            failure_message.append(get_pretty_event_string(event))
+
+        self.assertEquals(len(matching_events), 0, '\n'.join(matching_events))
+
+    def relative_path_to_absolute_uri(self, relative_path):
+        return '/'.join([BASE_URL.rstrip('/'), relative_path.lstrip('/')])
 
 
 class UniqueCourseTest(WebAppTest):

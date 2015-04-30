@@ -584,14 +584,25 @@ class OwnLearnerProfilePageTest(LearnerProfileTestMixin, WebAppTest):
 
         self.assert_default_image_has_public_access(profile_page)
 
-        profile_page.upload_file(filename='image.jpg')
+        event_filter = {
+            'event_type': self.USER_SETTINGS_CHANGED_EVENT_NAME,
+            'username': username,
+            'event': {
+                'setting': 'profile_image_uploaded_at',
+                'user_id': user_id,
+            }
+        }
+
+        with self.assert_matching_events_emitted(event_filter):
+            profile_page.upload_file(filename='image.jpg')
         self.assertTrue(profile_page.image_upload_success)
-        self.assertTrue(profile_page.remove_profile_image())
+
+        with self.assert_matching_events_emitted(event_filter):
+            self.assertTrue(profile_page.remove_profile_image())
+
         self.assertTrue(profile_page.profile_has_default_image)
         profile_page.visit()
         self.assertTrue(profile_page.profile_has_default_image)
-
-        self.assert_event_emitted_num_times(user_id, 'profile_image_uploaded_at', 2)
 
     def test_user_cannot_remove_default_image(self):
         """

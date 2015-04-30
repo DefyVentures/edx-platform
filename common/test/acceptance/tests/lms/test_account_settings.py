@@ -31,30 +31,43 @@ class AccountSettingsTestMixin(EventsTestMixin, WebAppTest):
         user_id = auto_auth_page.get_user_id()
         return username, user_id
 
-    def assert_event_emitted_num_times(self, user_id, setting, num_times):
-        """
-        Verify a particular user settings change event was emitted a certain
-        number of times.
-        """
-        # pylint disable=no-member
-        super(AccountSettingsTestMixin, self).assert_event_emitted_num_times(
-            self.USER_SETTINGS_CHANGED_EVENT_NAME, self.start_time, user_id, num_times, setting=setting
-        )
+    def settings_changed_event_filter(self, event):
+        return event['event_type'] == self.USER_SETTINGS_CHANGED_EVENT_NAME
 
-    def verify_settings_changed_events(self, username, user_id, events, table=None):
-        """
-        Verify a particular set of account settings change events were fired.
-        """
-        expected_referers = [self.ACCOUNT_SETTINGS_REFERER] * len(events)
-        for event in events:
-            event[u"user_id"] = long(user_id)
-            event[u"table"] = u"auth_userprofile" if table is None else table
-            event[u"truncated"] = []
+    def settings_changed_event_expectation(self, setting, old, new, table=None):
+        return {
+            'username': self.username,
+            'referer': self.get_settings_page_url(),
+            'event': {
+                'user_id': self.user_id,
+                'setting': setting,
+                'old': old,
+                'new': new,
+                'truncated': [],
+                'table': table or 'auth_userprofile'
+            }
+        }
 
-        self.verify_events_of_type(
-            username, self.USER_SETTINGS_CHANGED_EVENT_NAME, events,
-            expected_referers=expected_referers
-        )
+    def settings_change_initiated_event_filter(self, event):
+        return event['event_type'] == self.CHANGE_INITIATED_EVENT_NAME
+
+    def settings_change_initiated_event_expectation(self, setting, old, new, username=None, user_id=None):
+        return {
+            'username': username or self.username,
+            'referer': self.get_settings_page_url(),
+            'event': {
+                'user_id': user_id or self.user_id,
+                'setting': setting,
+                'old': old,
+                'new': new,
+            }
+        }
+
+    def get_settings_page_url(self):
+        return self.relative_path_to_absolute_uri(self.ACCOUNT_SETTINGS_REFERER)
+
+    def assert_no_setting_changed_event(self):
+        self.assert_no_matching_events_emitted({'event_type': self.USER_SETTINGS_CHANGED_EVENT_NAME})
 
 
 class DashboardMenuTest(AccountSettingsTestMixin, WebAppTest):
@@ -110,15 +123,16 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
         And I visit my account settings page
         Then a page view analytics event should be recorded
         """
-        self.verify_events_of_type(
-            self.username,
-            u"edx.user.settings.viewed",
-            [{
-                u"user_id": long(self.user_id),
-                u"page": u"account",
-                u"visibility": None,
-            }]
-        )
+
+        event_filter = {
+            'event_type':'edx.user.settings.viewed',
+            'event': {
+                'user_id': self.user_id,
+                'page': 'account',
+                'visibility': None
+            }
+        }
+        self.wait_for_events(event_filter=event_filter, number_of_matches=1)
 
     def test_all_sections_and_fields_are_present(self):
         """
@@ -233,20 +247,13 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
             [u'another name', self.username],
         )
 
-        self.verify_settings_changed_events(
-            self.username, self.user_id,
+        actual_events = self.wait_for_events(event_filter=self.settings_changed_event_filter, number_of_matches=2)
+        self.assert_event_sequences_match(
             [
-                {
-                    u"setting": u"name",
-                    u"old": self.username,
-                    u"new": u"another name",
-                },
-                {
-                    u"setting": u"name",
-                    u"old": u'another name',
-                    u"new": self.username,
-                }
-            ]
+                self.settings_changed_event_expectation('name', self.username, 'another name'),
+                self.settings_changed_event_expectation('name', 'another name', self.username),
+            ],
+            actual_events
         )
 
     def test_email_field(self):
@@ -266,28 +273,21 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
             assert_after_reload=False
         )
 
-        self.verify_events_of_type(
-            username,
-            self.CHANGE_INITIATED_EVENT_NAME,
+        actual_events = self.wait_for_events(
+            event_filter=self.settings_change_initiated_event_filter, number_of_matches=2)
+        self.assert_event_sequences_match(
             [
-                {
-                    u"user_id": long(user_id),
-                    u"setting": u"email",
-                    u"old": email,
-                    u"new": u'me@here.com'
-                },
-                {
-                    u"user_id": long(user_id),
-                    u"setting": u"email",
-                    u"old": email,  # NOTE the first email change was never confirmed, so old has not changed.
-                    u"new": u'you@there.com'
-                }
+                self.settings_change_initiated_event_expectation(
+                    'email', email, 'me@here.com', username=username, user_id=user_id),
+                # NOTE the first email change was never confirmed, so old has not changed.
+                self.settings_change_initiated_event_expectation(
+                    'email', email, 'you@there.com', username=username, user_id=user_id),
             ],
-            [self.ACCOUNT_SETTINGS_REFERER, self.ACCOUNT_SETTINGS_REFERER]
+            actual_events
         )
         # Email is not saved until user confirms, so no events should have been
         # emitted.
-        self.assert_event_emitted_num_times(user_id, 'email', 0)
+        self.assert_no_setting_changed_event()
 
     def test_password_field(self):
         """
@@ -300,20 +300,11 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
             success_message='Click the link in the message to reset your password.',
         )
 
-        self.verify_events_of_type(
-            self.username,
-            self.CHANGE_INITIATED_EVENT_NAME,
-            [{
-                u"user_id": int(self.user_id),
-                u"setting": "password",
-                u"old": None,
-                u"new": None
-            }],
-            [self.ACCOUNT_SETTINGS_REFERER]
-        )
+        event_filter = self.settings_change_initiated_event_expectation('password', None, None)
+        self.wait_for_events(event_filter=event_filter, number_of_matches=1)
         # Like email, since the user has not confirmed their password change,
         # the field has not yet changed, so no events will have been emitted.
-        self.assert_event_emitted_num_times(self.user_id, 'password', 0)
+        self.assert_no_setting_changed_event()
 
     @skip(
         'On bokchoy test servers, language changes take a few reloads to fully realize '
@@ -341,20 +332,14 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
             u'',
             [u'Bachelor\'s degree', u''],
         )
-        self.verify_settings_changed_events(
-            self.username, self.user_id,
+
+        actual_events = self.wait_for_events(event_filter=self.settings_changed_event_filter, number_of_matches=2)
+        self.assert_event_sequences_match(
             [
-                {
-                    u"setting": u"level_of_education",
-                    u"old": None,
-                    u"new": u'b',
-                },
-                {
-                    u"setting": u"level_of_education",
-                    u"old": u'b',
-                    u"new": None,
-                }
-            ]
+                self.settings_changed_event_expectation('level_of_education', None, 'b'),
+                self.settings_changed_event_expectation('level_of_education', 'b', None),
+            ],
+            actual_events
         )
 
     def test_gender_field(self):
@@ -367,20 +352,14 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
             u'',
             [u'Female', u''],
         )
-        self.verify_settings_changed_events(
-            self.username, self.user_id,
+
+        actual_events = self.wait_for_events(event_filter=self.settings_changed_event_filter, number_of_matches=2)
+        self.assert_event_sequences_match(
             [
-                {
-                    u"setting": u"gender",
-                    u"old": None,
-                    u"new": u'f',
-                },
-                {
-                    u"setting": u"gender",
-                    u"old": u'f',
-                    u"new": None,
-                }
-            ]
+                self.settings_changed_event_expectation('gender', None, 'f'),
+                self.settings_changed_event_expectation('gender', 'f', None),
+            ],
+            actual_events
         )
 
     def test_year_of_birth_field(self):
@@ -396,20 +375,14 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
             u'',
             [u'1980', u''],
         )
-        self.verify_settings_changed_events(
-            self.username, self.user_id,
+
+        actual_events = self.wait_for_events(event_filter=self.settings_changed_event_filter, number_of_matches=2)
+        self.assert_event_sequences_match(
             [
-                {
-                    u"setting": u"year_of_birth",
-                    u"old": None,
-                    u"new": 1980L,
-                },
-                {
-                    u"setting": u"year_of_birth",
-                    u"old": 1980L,
-                    u"new": None,
-                }
-            ]
+                self.settings_changed_event_expectation('year_of_birth', None, 1980),
+                self.settings_changed_event_expectation('year_of_birth', 1980, None),
+            ],
+            actual_events
         )
 
     def test_country_field(self):
@@ -434,21 +407,13 @@ class AccountSettingsPageTest(AccountSettingsTestMixin, WebAppTest):
             [u'Pushto', u''],
         )
 
-        self.verify_settings_changed_events(
-            self.username, self.user_id,
+        actual_events = self.wait_for_events(event_filter=self.settings_changed_event_filter, number_of_matches=2)
+        self.assert_event_sequences_match(
             [
-                {
-                    u"setting": u"language_proficiencies",
-                    u"old": [],
-                    u"new": [{u"code": u"ps"}],
-                },
-                {
-                    u"setting": u"language_proficiencies",
-                    u"old": [{u"code": u"ps"}],
-                    u"new": [],
-                }
+                self.settings_changed_event_expectation('language_proficiencies', [], [{'code': 'ps'}], table='student_languageproficiency'),
+                self.settings_changed_event_expectation('language_proficiencies', [{'code': 'ps'}], [], table='student_languageproficiency'),
             ],
-            table=u"student_languageproficiency"
+            actual_events
         )
 
     def test_connected_accounts(self):
