@@ -5,6 +5,7 @@ import inspect
 import json
 import unittest
 import functools
+import operator
 import pprint
 import requests
 import os
@@ -25,6 +26,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 from ..pages.common import BASE_URL
+
+
+MAX_EVENTS_IN_FAILURE_OUTPUT = 20
 
 
 def skip_if_browser(browser):
@@ -390,8 +394,7 @@ class EventsTestMixin(object):
                     event_filter=self.event_filter_to_descriptive_string(event_filter),
                 ),
                 functools.partial(self.get_matching_events_from_time, start_time=start_time, event_filter={})
-            ),
-            timeout=0.5
+            )
         ).fulfill()
 
     def get_matching_events_from_time(self, start_time=None, event_filter=None):
@@ -438,16 +441,13 @@ class EventsTestMixin(object):
 
     def assert_no_matching_events_emitted(self, event_filter):
         matching_events = self.get_matching_events_from_time(event_filter=event_filter)
-        failure_message_lines = [
-            'Unexpected matching events were emitted.',
-            'Event Filter:',
-            self.event_filter_to_descriptive_string(event_filter),
-            'Matching Events:',
-        ]
-        for event in matching_events:
-            failure_message_lines.append(get_pretty_event_string(event) + '\n')
 
-        self.assertEquals(len(matching_events), 0, '\n'.join(failure_message_lines))
+        description = CollectedEventsDescription(
+            'Events unexpected matched the filter:\n' + self.event_filter_to_descriptive_string(event_filter),
+            lambda: matching_events
+        )
+
+        self.assertEquals(len(matching_events), 0, description)
 
     def relative_path_to_absolute_uri(self, relative_path):
         return '/'.join([BASE_URL.rstrip('/'), relative_path.lstrip('/')])
@@ -491,10 +491,15 @@ class CollectedEventsDescription(object):
     def __str__(self):
         message_lines = [
             self.description,
-            'Events Collected:'
+            'Events:'
         ]
-        for event in self.get_events_func():
+        events = self.get_events_func()
+        events.sort(key=operator.itemgetter('time'), reverse=True)
+        for event in events[:MAX_EVENTS_IN_FAILURE_OUTPUT]:
             message_lines.append(get_pretty_event_string(event))
+        if len(events) > MAX_EVENTS_IN_FAILURE_OUTPUT:
+            message_lines.append(
+                'Too many events to display, the remaining events were omitted. Run locally to diagnose.')
 
         return '\n\n'.join(message_lines)
 
