@@ -1,9 +1,11 @@
 """
 Test helper functions and base classes.
 """
+import inspect
 import json
 import unittest
 import functools
+import pprint
 import requests
 import os
 from contextlib import contextmanager
@@ -382,9 +384,14 @@ class EventsTestMixin(object):
 
         return Promise(
             has_matching_events,
-            'Waiting for {number_of_matches} events to match the filter.'.format(
-                number_of_matches=number_of_matches
-            )
+            CollectedEventsDescription(
+                'Waiting for {number_of_matches} events to match the filter:\n{event_filter}'.format(
+                    number_of_matches=number_of_matches,
+                    event_filter=self.event_filter_to_descriptive_string(event_filter),
+                ),
+                functools.partial(self.get_matching_events_from_time, start_time=start_time, event_filter={})
+            ),
+            timeout=0.5
         ).fulfill()
 
     def get_matching_events_from_time(self, start_time=None, event_filter=None):
@@ -431,19 +438,65 @@ class EventsTestMixin(object):
 
     def assert_no_matching_events_emitted(self, event_filter):
         matching_events = self.get_matching_events_from_time(event_filter=event_filter)
-        failure_message = [
-            'Matching events were emitted.',
+        failure_message_lines = [
+            'Unexpected matching events were emitted.',
             'Event Filter:',
-            get_pretty_event_string(event_filter),
+            self.event_filter_to_descriptive_string(event_filter),
             'Matching Events:',
         ]
         for event in matching_events:
-            failure_message.append(get_pretty_event_string(event))
+            failure_message_lines.append(get_pretty_event_string(event) + '\n')
 
-        self.assertEquals(len(matching_events), 0, '\n'.join(matching_events))
+        self.assertEquals(len(matching_events), 0, '\n'.join(failure_message_lines))
 
     def relative_path_to_absolute_uri(self, relative_path):
         return '/'.join([BASE_URL.rstrip('/'), relative_path.lstrip('/')])
+
+    def event_filter_to_descriptive_string(self, event_filter):
+        message = ''
+        if callable(event_filter):
+            file_name = '(unknown)'
+            try:
+                file_name = inspect.getsourcefile(event_filter)
+            except TypeError:
+                pass
+
+            try:
+                list_of_source_lines, line_no = inspect.getsourcelines(event_filter)
+            except IOError:
+                pass
+            else:
+                message = '{file_name}:{line_no}\n{hr}\n{event_filter}\n{hr}'.format(
+                    event_filter=''.join(list_of_source_lines).rstrip(),
+                    file_name=file_name,
+                    line_no=line_no,
+                    hr='-' * 20,
+                )
+
+        if not message:
+            message = '{hr}\n{event_filter}\n{hr}'.format(
+                event_filter=pprint.pformat(event_filter),
+                hr='-' * 20,
+            )
+
+        return message
+
+
+class CollectedEventsDescription(object):
+
+    def __init__(self, description, get_events_func):
+        self.description = description
+        self.get_events_func = get_events_func
+
+    def __str__(self):
+        message_lines = [
+            self.description,
+            'Events Collected:'
+        ]
+        for event in self.get_events_func():
+            message_lines.append(get_pretty_event_string(event))
+
+        return '\n\n'.join(message_lines)
 
 
 class UniqueCourseTest(WebAppTest):
