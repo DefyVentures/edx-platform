@@ -12,16 +12,16 @@ _DEFAULT_ICON_CLASS = 'fa-signin'
 class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
     """Defy Ventures OAuth authentication backend"""
     name = 'defyventures'
-    AUTHORIZATION_URL = 'http://drock.ngrok.io/oauth2/authorize/'
-    ACCESS_TOKEN_URL = 'http://drock.ngrok.io/oauth2/token/'
-    SCOPE_SEPARATOR = ','
+    AUTHORIZATION_URL = 'http://reidlcms.ngrok.io/oauth2/authorize/'
+    ACCESS_TOKEN_URL = 'http://reidlcms.ngrok.io/oauth2/token/'
+    ACCESS_TOKEN_METHOD = 'POST'
     EXTRA_DATA = [
         ('id', 'id'),
         ('expires', 'expires')
     ]
 
     def get_user_details(self, response):
-        """Return user details from Github account"""
+        """Return user details from Defy Ventures account"""
         first_name = response.get('first_name', '')
         last_name = response.get('last_name', '')
         full_name = first_name + ' ' + last_name
@@ -34,13 +34,31 @@ class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
 
     def user_data(self, access_token, *args, **kwargs):
         """Loads user data from service"""
-        url = 'http://drock.ngrok.io/api/user?' + urlencode({
+        url = 'http://reidlcms.ngrok.io/api/user?' + urlencode({
             'token': access_token
         })
         try:
             return json.load(self.urlopen(url))
         except ValueError:
             return None
+
+    def auth_params(self, state=None):
+        from django.conf import settings
+        client_id = settings.SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY
+        params = {
+            'client_id': client_id,
+            'redirect_uri': self.get_redirect_uri(),
+        }
+        if self.STATE_PARAMETER and state:
+            params['state'] = state
+        if self.RESPONSE_TYPE:
+            params['response_type'] = self.RESPONSE_TYPE
+        return params
+
+
+    def get_redirect_uri(self, state=None):
+        """Return redirect without redirect_state parameter."""
+        return self.redirect_uri
 
 
 class BaseProvider(object):
@@ -208,10 +226,10 @@ class DefyVenturesOauth2(BaseProvider):
     """Provider for Defy Venture's Oauth2 auth system."""
 
     BACKEND_CLASS = DefyVenturesOAuth2Backend
-    NAME = 'Defy Ventures'
+    NAME = 'DefyVentures'
     SETTINGS = {
-        'SOCIAL_AUTH_DEFYVENTURES_KEY': None,
-        'SOCIAL_AUTH_DEFYVENTURES_SECRET': None,
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': None,
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': None,
     }
 
     @classmethod
