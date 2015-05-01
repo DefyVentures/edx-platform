@@ -4,7 +4,11 @@ Loaded by Django's settings mechanism. Consequently, this module must not
 invoke the Django armature.
 """
 
+from base64 import b64encode
+import json
+
 from social.backends import google, linkedin, facebook, oauth
+from social.p3 import urlencode
 
 _DEFAULT_ICON_CLASS = 'fa-signin'
 
@@ -34,20 +38,15 @@ class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
 
     def user_data(self, access_token, *args, **kwargs):
         """Loads user data from service"""
-        url = 'http://reidlcms.ngrok.io/api/user?' + urlencode({
-            'token': access_token
-        })
-        try:
-            return json.load(self.urlopen(url))
-        except ValueError:
-            return None
+        url = 'http://reidlcms.ngrok.io/api/user'
+        return self.get_json(url, params={'token': access_token})
 
     def auth_params(self, state=None):
         from django.conf import settings
         client_id = settings.SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY
         params = {
             'client_id': client_id,
-            'redirect_uri': self.get_redirect_uri(),
+            'redirect_uri': self.get_redirect_uri(state),
         }
         if self.STATE_PARAMETER and state:
             params['state'] = state
@@ -59,6 +58,15 @@ class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
     def get_redirect_uri(self, state=None):
         """Return redirect without redirect_state parameter."""
         return self.redirect_uri
+
+    def auth_headers(self):
+        from django.conf import settings
+        client_auth = b64encode(settings.SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY + ':' +
+                                settings.SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET)
+        return {'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                'Authorization': 'Basic {0}'.format(client_auth)}
+
 
 
 class BaseProvider(object):
