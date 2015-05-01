@@ -4,9 +4,43 @@ Loaded by Django's settings mechanism. Consequently, this module must not
 invoke the Django armature.
 """
 
-from social.backends import google, linkedin, facebook
+from social.backends import google, linkedin, facebook, oauth
 
 _DEFAULT_ICON_CLASS = 'fa-signin'
+
+
+class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
+    """Defy Ventures OAuth authentication backend"""
+    name = 'defyventures'
+    AUTHORIZATION_URL = 'http://drock.ngrok.io/oauth2/authorize/'
+    ACCESS_TOKEN_URL = 'http://drock.ngrok.io/oauth2/token/'
+    SCOPE_SEPARATOR = ','
+    EXTRA_DATA = [
+        ('id', 'id'),
+        ('expires', 'expires')
+    ]
+
+    def get_user_details(self, response):
+        """Return user details from Github account"""
+        first_name = response.get('first_name', '')
+        last_name = response.get('last_name', '')
+        full_name = first_name + ' ' + last_name
+        full_name = full_name.strip()
+        return {'username': response.get('login'),
+                'email': response.get('email') or '',
+                'first_name': first_name,
+                'last_name': last_name,
+                'full_name': full_name}
+
+    def user_data(self, access_token, *args, **kwargs):
+        """Loads user data from service"""
+        url = 'http://drock.ngrok.io/api/user?' + urlencode({
+            'token': access_token
+        })
+        try:
+            return json.load(self.urlopen(url))
+        except ValueError:
+            return None
 
 
 class BaseProvider(object):
@@ -159,6 +193,25 @@ class FacebookOauth2(BaseProvider):
     SETTINGS = {
         'SOCIAL_AUTH_FACEBOOK_KEY': None,
         'SOCIAL_AUTH_FACEBOOK_SECRET': None,
+    }
+
+    @classmethod
+    def get_email(cls, provider_details):
+        return provider_details.get('email')
+
+    @classmethod
+    def get_name(cls, provider_details):
+        return provider_details.get('fullname')
+
+
+class DefyVenturesOauth2(BaseProvider):
+    """Provider for Defy Venture's Oauth2 auth system."""
+
+    BACKEND_CLASS = DefyVenturesOAuth2Backend
+    NAME = 'Defy Ventures'
+    SETTINGS = {
+        'SOCIAL_AUTH_DEFYVENTURES_KEY': None,
+        'SOCIAL_AUTH_DEFYVENTURES_SECRET': None,
     }
 
     @classmethod
