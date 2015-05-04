@@ -959,7 +959,12 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
         # now want to put them through the same logging and cookie calculation
         # logic as with first-party auth.
         running_pipeline = pipeline.get(request)
-        username = running_pipeline['kwargs'].get('username')
+
+        # reidransom: For some reason random characters get appended to
+        # `running_pipeline['kwargs']['username']`.
+        #username = running_pipeline['kwargs'].get('username')
+        username = running_pipeline['kwargs']['details'].get('username')
+
         backend_name = running_pipeline['backend']
         requested_provider = provider.Registry.get_by_backend_name(backend_name)
 
