@@ -6,6 +6,7 @@ invoke the Django armature.
 
 from base64 import b64encode
 import json
+import re
 
 from social.backends import google, linkedin, facebook, oauth
 from social.p3 import urlencode
@@ -26,15 +27,19 @@ class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
 
     def get_user_details(self, response):
         """Return user details from Defy Ventures account"""
+        email = response.get('email')
+        username = email.replace('@', 'AT')
+        username = re.sub('[^a-zA-Z0-9]', '', username)
         first_name = response.get('first_name', '')
         last_name = response.get('last_name', '')
         full_name = first_name + ' ' + last_name
         full_name = full_name.strip()
-        return {'username': response.get('login'),
-                'email': response.get('email') or '',
-                'first_name': first_name,
-                'last_name': last_name,
-                'full_name': full_name}
+        details = {
+            'username': username,
+            'email': email,
+            'fullname': full_name,
+        }
+        return details
 
     def user_data(self, access_token, *args, **kwargs):
         """Loads user data from service"""
