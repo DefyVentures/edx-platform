@@ -6,6 +6,7 @@ invoke the Django armature.
 
 from base64 import b64encode
 import json
+from os import path
 import re
 
 from social.backends import google, linkedin, facebook, oauth
@@ -13,12 +14,16 @@ from social.p3 import urlencode
 
 _DEFAULT_ICON_CLASS = 'fa-signin'
 
+settings_dir = path.abspath(__file__).split('/edx-platform', 1)[0]
+settings_file = path.join(settings_dir, 'lms.auth.json')
+defy_settings = json.load(open(settings_file))['THIRD_PARTY_AUTH']['DefyVentures']
+
 
 class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
     """Defy Ventures OAuth authentication backend"""
     name = 'defyventures'
-    AUTHORIZATION_URL = 'http://reidlcms.ngrok.io/oauth2/authorize/'
-    ACCESS_TOKEN_URL = 'http://reidlcms.ngrok.io/oauth2/token/'
+    AUTHORIZATION_URL = defy_settings['DEFYVENTURES_BASE_URL'] + '/oauth2/authorize/'
+    ACCESS_TOKEN_URL  = defy_settings['DEFYVENTURES_BASE_URL'] + '/oauth2/token/'
     ACCESS_TOKEN_METHOD = 'POST'
     EXTRA_DATA = [
         ('id', 'id'),
@@ -43,12 +48,11 @@ class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
 
     def user_data(self, access_token, *args, **kwargs):
         """Loads user data from service"""
-        url = 'http://reidlcms.ngrok.io/api/user'
+        url = defy_settings['DEFYVENTURES_BASE_URL'] + '/api/user'
         return self.get_json(url, params={'token': access_token})
 
     def auth_params(self, state=None):
-        from django.conf import settings
-        client_id = settings.SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY
+        client_id = defy_settings['SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY']
         params = {
             'client_id': client_id,
             'redirect_uri': self.get_redirect_uri(state),
@@ -65,9 +69,8 @@ class DefyVenturesOAuth2Backend(oauth.BaseOAuth2):
         return self.redirect_uri
 
     def auth_headers(self):
-        from django.conf import settings
-        client_auth = b64encode(settings.SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY + ':' +
-                                settings.SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET)
+        client_auth = b64encode(defy_settings['SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY'] + ':' +
+                                defy_settings['SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET'])
         return {'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'application/json',
                 'Authorization': 'Basic {0}'.format(client_auth)}
@@ -243,6 +246,7 @@ class DefyVenturesOauth2(BaseProvider):
     SETTINGS = {
         'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': None,
         'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': None,
+        'DEFYVENTURES_BASE_URL': None,
     }
 
     @classmethod
