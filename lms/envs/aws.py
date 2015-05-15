@@ -505,6 +505,6 @@ PDF_RECEIPT_COBRAND_LOGO_HEIGHT_MM = ENV_TOKENS.get(
 INSTALLED_APPS += (
     'social.apps.django_app.default',
 )
-AUTHENTICATION_BACKENDS = (
+AUTHENTICATION_BACKENDS += (
     'social.backends.defy.DefyVenturesOAuth2Backend',
 )
