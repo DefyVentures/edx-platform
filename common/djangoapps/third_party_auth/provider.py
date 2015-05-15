@@ -4,7 +4,8 @@ Loaded by Django's settings mechanism. Consequently, this module must not
 invoke the Django armature.
 """
 
-from social.backends import google, linkedin, facebook
+from social.backends import google, linkedin, facebook, defy
+from social.p3 import urlencode
 
 _DEFAULT_ICON_CLASS = 'fa-signin'
 
@@ -159,6 +160,26 @@ class FacebookOauth2(BaseProvider):
     SETTINGS = {
         'SOCIAL_AUTH_FACEBOOK_KEY': None,
         'SOCIAL_AUTH_FACEBOOK_SECRET': None,
+    }
+
+    @classmethod
+    def get_email(cls, provider_details):
+        return provider_details.get('email')
+
+    @classmethod
+    def get_name(cls, provider_details):
+        return provider_details.get('fullname')
+
+
+class DefyVenturesOauth2(BaseProvider):
+    """Provider for Defy Venture's Oauth2 auth system."""
+
+    BACKEND_CLASS = defy.DefyVenturesOAuth2Backend
+    NAME = 'DefyVentures'
+    SETTINGS = {
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': None,
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': None,
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_BASE_URL': None,
     }
 
     @classmethod
