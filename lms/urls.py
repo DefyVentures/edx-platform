@@ -80,7 +80,7 @@ urlpatterns = ('',  # nopep8
     url(r'^api/course/details/v0/', include('course_about.urls')),
 
     # DefyVentures API
-    url(r'^api/defy/', include('defy.urls')),
+    url(r'^apidefy/', include('defy.urls')),
 
 )
 
