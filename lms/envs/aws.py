@@ -508,3 +508,7 @@ INSTALLED_APPS += (
 AUTHENTICATION_BACKENDS += (
     'social.backends.defy.DefyVenturesOAuth2Backend',
 )
+SOUTH_MIGRATION_MODULES = {
+    'default': 'social.apps.django_app.default.south_migrations',
+    'djcelery': 'ignore',
+}
