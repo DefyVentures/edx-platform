@@ -601,6 +601,15 @@ def set_logged_in_cookie(backend=None, user=None, request=None, is_api=None, *ar
     to the next pipeline step.
 
     """
+
+    # TODO: For some reason `request` as it's passed to this function is a QueryDict, not a
+    # Request object.  This likely has something to do with python-social-auth (either config
+    # or version incompatibility).  In any case, we are skipping this function for now since
+    # it's not critical to set this cookie.  This should be revisited at some point, especially
+    # if we decide at some point to have edX display a different marketing site to logged-in
+    # users. -reidransom
+    return
+
     if user is not None and user.is_authenticated() and not is_api:
         if request is not None:
             # Check that the cookie isn't already set.
