@@ -1013,6 +1013,11 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
         backend_name = running_pipeline['backend']
         requested_provider = provider.Registry.get_by_backend_name(backend_name)
 
+        # Third-party auth pipeline appends random characters to username which causes
+        # authentication to not work here.  So we need to get a clean version of the username.
+        # -reidransom
+        username = running_pipeline['kwargs']['details'].get('username')
+
         try:
             user = pipeline.get_authenticated_user(username, backend_name)
             third_party_auth_successful = True
