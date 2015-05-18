@@ -79,6 +79,9 @@ urlpatterns = ('',  # nopep8
     # CourseInfo API RESTful endpoints
     url(r'^api/course/details/v0/', include('course_about.urls')),
 
+    # DefyVentures API
+    url(r'^api/defy/', include('defy.urls')),
+
 )
 
 if settings.FEATURES["ENABLE_MOBILE_REST_API"]:
