@@ -62,12 +62,13 @@ polib==1.0.3
 pycrypto>=2.6
 pygments==2.0.1
 pygraphviz==1.1
+PyJWT==1.2.0
 pymongo==2.7.2
 pyparsing==2.0.1
 python-memcached==1.48
 python-openid==2.2.5
 python-dateutil==2.1
--e git://github.com/DefyVentures/python-social-auth.git#egg=social
+git+https://github.com/DefyVentures/python-social-auth.git#egg=social
 python-social-auth==0.1.23
 pytz==2012h
 pysrt==0.4.7
