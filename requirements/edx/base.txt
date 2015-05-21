@@ -67,7 +67,6 @@ pyparsing==2.0.1
 python-memcached==1.48
 python-openid==2.2.5
 python-dateutil==2.1
-git+https://github.com/DefyVentures/python-social-auth.git#egg=social
 python-social-auth==0.1.23
 pytz==2012h
 pysrt==0.4.7
