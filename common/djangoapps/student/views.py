@@ -1373,7 +1373,7 @@ def _do_create_account(post_vars, extended_profile=None):
     """
     user = User(username=post_vars['username'],
                 email=post_vars['email'],
-                is_active=False)
+                is_active=post_vars['active'])
     user.set_password(post_vars['password'])
     registration = Registration()
 
@@ -1449,9 +1449,16 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
         getattr(settings, 'REGISTRATION_EXTRA_FIELDS', {})
     )
 
+    # Defy fully trusts users who have authenticated via OAuth so make thier accounts active
+    # right away.
     if third_party_auth.is_enabled() and pipeline.running(request):
         post_vars = dict(post_vars.items())
-        post_vars.update({'password': pipeline.make_random_password()})
+        post_vars.update({
+            'password': pipeline.make_random_password(),
+            'active':   True,
+        })
+    else:
+        post_vars['active'] = False
 
     # if doing signup for an external authorization, then get email, password, name from the eamap
     # don't use the ones from the form, since the user could have hacked those
