@@ -179,7 +179,6 @@ class DefyVenturesOauth2(BaseProvider):
     SETTINGS = {
         'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': None,
         'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': None,
-        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_BASE_URL': None,
     }
 
     @classmethod
