@@ -177,6 +177,7 @@ class DefyVenturesOauth2(BaseProvider):
     BACKEND_CLASS = defy.DefyVenturesOAuth2Backend
     NAME = 'DefyVentures'
     SETTINGS = {
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_BASE_URL': None,
         'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': None,
         'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': None,
     }
