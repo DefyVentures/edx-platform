@@ -2013,5 +2013,6 @@ PDF_RECEIPT_COBRAND_LOGO_PATH = PROJECT_ROOT + '/static/images/default-theme/log
 # Height of the Co-brand Logo in mm
 PDF_RECEIPT_COBRAND_LOGO_HEIGHT_MM = 12
 
+# A list of client IPs that can access views decorated with @lcms_only
 DEFY_LCMS_IPS = ['10.0.0.60']
 
