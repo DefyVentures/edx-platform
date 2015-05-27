@@ -1,9 +1,10 @@
 import json
 
 from django.http import HttpResponse
+from django.contrib import auth
 
 import branding
-from courseware.courses import get_course_about_section
+import courseware
 
 from .decorators import lcms_only
 
@@ -16,7 +17,8 @@ def dumps(value):
 
 @lcms_only
 def courses(request):
-
+    """ Returns a json response with course data.
+    """
     courses = []
     for course in branding.get_visible_courses():
         data = {
@@ -44,8 +46,35 @@ def courses(request):
             'more_info',
             'ocw_links',
         ]
-        data['about'] = {key: get_course_about_section(course, key) for key in about_keys}
+        data['about'] = {key: courseware.courses.get_course_about_section(course, key) for key in about_keys}
         courses.append(data)
-
     return HttpResponse(json.dumps(courses), content_type='application/json')
+
+def student_progress(request):
+    """ Return a json response with student progress data.
+    """
+    #module_ids = [dumps(course.scope_ids.def_id) for course in branding.get_visible_courses()]
+    #modules = courseware.models.StudentModule.objects.filter(module_type='course',
+    #                                                         module_state_key__in=module_ids)
+    modules = courseware.models.StudentModule.objects.filter(module_type='course')
+    modules = modules.order_by('student')
+    students = {}
+    for module in modules:
+        email = module.student.email
+
+        # Add key for this student if it doesn't already exist
+        if email not in students:
+            students[email] = []
+
+        # Append this module's data
+        data = {
+            'module_type': module.module_type,
+            'module_id':   dumps(module.module_state_key),
+            'state':       json.loads(module.state),
+            'created':     dumps(module.created),
+            'modified':    dumps(module.modified),
+            'course_id':   dumps(module.course_id),
+        }
+        students[email].append(data)
+    return HttpResponse(json.dumps(students), content_type='application/json')
 
