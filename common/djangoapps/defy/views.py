@@ -53,28 +53,17 @@ def courses(request):
 def student_progress(request):
     """ Return a json response with student progress data.
     """
-    #module_ids = [dumps(course.scope_ids.def_id) for course in branding.get_visible_courses()]
-    #modules = courseware.models.StudentModule.objects.filter(module_type='course',
-    #                                                         module_state_key__in=module_ids)
+    data = []
     modules = courseware.models.StudentModule.objects.filter(module_type='course')
-    modules = modules.order_by('student')
-    students = {}
     for module in modules:
-        email = module.student.email
-
-        # Add key for this student if it doesn't already exist
-        if email not in students:
-            students[email] = []
-
-        # Append this module's data
-        data = {
+        data.append({
+            'email':       module.student.email,
             'module_type': module.module_type,
             'module_id':   dumps(module.module_state_key),
             'state':       json.loads(module.state),
             'created':     dumps(module.created),
             'modified':    dumps(module.modified),
             'course_id':   dumps(module.course_id),
-        }
-        students[email].append(data)
-    return HttpResponse(json.dumps(students), content_type='application/json')
+        })
+    return HttpResponse(json.dumps(data), content_type='application/json')
 
