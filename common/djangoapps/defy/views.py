@@ -35,7 +35,7 @@ class NormalizeData(object):
             return el.__norm()
 
         if type(el) not in self.SERIALIZABLE_TYPES:
-            return str(el)
+            return unicode(el)
         return el
 
     def iterate_list(self):
@@ -58,7 +58,7 @@ def dumps(data):
     try:
         return json.dumps(norm.element)
     except TypeError:
-        return str(norm.element)
+        return unicode(norm.element)
 
 @lcms_only
 def courses(request):
@@ -97,6 +97,9 @@ def courses(request):
 
 def student_progress(request):
     """ Return a json response with student progress data.
+
+    TODO: This will need to be modified at some point to only return a subset of data.  Perhaps
+    it get's passed a datetime `since` and only returns data that's been modified since then.
     """
 
     # Make courses accessible by module_id in a dict
@@ -106,23 +109,37 @@ def student_progress(request):
         courses[module_id] = course
 
     data = []
-    modules = courseware.models.StudentModule.objects.filter(module_type='course')
-    for module in modules:
+    course_modules = courseware.models.StudentModule.objects.filter(module_type='course')
+    for course_module in course_modules:
 
         # Get detailed user progress data
-        module_id = dumps(module.module_state_key)
+        module_id = dumps(course_module.module_state_key)
         course = courses[module_id]
-        courseware_summary = courseware.grades.progress_summary(module.student, request, course)
+        courseware.grades.progress_summary(course_module.student, request, course)
+
+        total_problems = 0
+        completed_problems = 0
+        problem_modules = courseware.models.StudentModule.objects.filter(
+            module_type='problem',
+            student=course_module.student,
+            course_id=course_module.course_id,
+        )
+        for problem_module in problem_modules:
+            state = json.loads(problem_module.state)
+            total_problems += 1
+            if state.get('done', False):
+                completed_problems += 1
 
         data.append({
-            'email':       module.student.email,
-            'module_type': module.module_type,
+            'email':       course_module.student.email,
+            'module_type': course_module.module_type,
             'module_id':   module_id,
-            'state':       json.loads(module.state),
-            'created':     module.created,
-            'modified':    module.modified,
-            'course_id':   module.course_id,
-            'summary':     courseware.grades.progress_summary(module.student, request, course),
+            'state':       json.loads(course_module.state),
+            'created':     course_module.created,
+            'modified':    course_module.modified,
+            'course_id':   course_module.course_id,
+            'total_problems':     total_problems,
+            'completed_problems': completed_problems,
         })
 
     return HttpResponse(dumps(data), content_type='application/json')
