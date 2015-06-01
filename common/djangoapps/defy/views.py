@@ -132,8 +132,9 @@ def student_progress(request):
             total_problems += 1
             if state.get('done', False):
                 completed_problems += 1
-            grade += problem_module.grade
-            max_grade += problem_module.max_grade
+            if problem_module.grade is not None and problem_module.max_grade is not None:
+                grade += problem_module.grade
+                max_grade += problem_module.max_grade
             if problem_module.modified > modified:
                 modified = problem_module.modified
 
