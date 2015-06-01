@@ -117,6 +117,7 @@ def student_progress(request):
         course = courses[module_id]
         courseware.grades.progress_summary(course_module.student, request, course)
 
+        modified = course_module.modified
         total_problems = 0
         completed_problems = 0
         grade = 0
@@ -133,6 +134,8 @@ def student_progress(request):
                 completed_problems += 1
             grade += problem_module.grade
             max_grade += problem_module.max_grade
+            if problem_module.modified > modified:
+                modified = problem_module.modified
 
         data.append({
             'email':              course_module.student.email,
@@ -140,7 +143,7 @@ def student_progress(request):
             'module_id':          module_id,
             'state':              json.loads(course_module.state),
             'created':            course_module.created,
-            'modified':           course_module.modified,
+            'modified':           modified,  # Most recent problem module modified datetime
             'course_id':          course_module.course_id,
             'total_problems':     total_problems,
             'completed_problems': completed_problems,
