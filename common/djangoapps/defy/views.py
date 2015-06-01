@@ -119,6 +119,8 @@ def student_progress(request):
 
         total_problems = 0
         completed_problems = 0
+        grade = 0
+        max_grade = 0
         problem_modules = courseware.models.StudentModule.objects.filter(
             module_type='problem',
             student=course_module.student,
@@ -129,17 +131,21 @@ def student_progress(request):
             total_problems += 1
             if state.get('done', False):
                 completed_problems += 1
+            grade += problem_module.grade
+            max_grade += problem_module.max_grade
 
         data.append({
-            'email':       course_module.student.email,
-            'module_type': course_module.module_type,
-            'module_id':   module_id,
-            'state':       json.loads(course_module.state),
-            'created':     course_module.created,
-            'modified':    course_module.modified,
-            'course_id':   course_module.course_id,
+            'email':              course_module.student.email,
+            'module_type':        course_module.module_type,
+            'module_id':          module_id,
+            'state':              json.loads(course_module.state),
+            'created':            course_module.created,
+            'modified':           course_module.modified,
+            'course_id':          course_module.course_id,
             'total_problems':     total_problems,
             'completed_problems': completed_problems,
+            'grade':              grade,
+            'max_grade':          max_grade,
         })
 
     return HttpResponse(dumps(data), content_type='application/json')
