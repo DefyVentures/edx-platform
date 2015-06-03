@@ -338,6 +338,9 @@ MANAGERS = ADMINS
 
 EDX_PLATFORM_REVISION = os.environ.get('EDX_PLATFORM_REVISION')
 
+# Last git commit where studio static files were modified @reidransom
+EDX_PLATFORM_REVISION = 'bfcd48f'
+
 if not EDX_PLATFORM_REVISION:
     try:
         # Get git revision of the current file
