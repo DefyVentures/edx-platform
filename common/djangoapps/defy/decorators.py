@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import Http404
 
 def lcms_only(view_func):
     def authorize(request, *args, **kwargs):
