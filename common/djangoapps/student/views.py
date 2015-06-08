@@ -979,9 +979,16 @@ def accounts_login(request):
         if course_id and _get_course_enrollment_domain(course_id):
             return external_auth.views.course_specific_login(request, course_id.to_deprecated_string())
 
+    pipeline_url = auth_pipeline_urls(pipeline.AUTH_ENTRY_LOGIN, redirect_url=redirect_to)
+
+    # Auto-login with Defy OAuth if enabled
+    defy_pipeline_url = pipeline_url.get('DefyVentures')
+    if defy_pipeline_url:
+        return redirect(defy_pipeline_url)
+
     context = {
         'pipeline_running': 'false',
-        'pipeline_url': auth_pipeline_urls(pipeline.AUTH_ENTRY_LOGIN, redirect_url=redirect_to),
+        'pipeline_url': pipeline_url,
         'platform_name': settings.PLATFORM_NAME,
     }
     return render_to_response('login.html', context)
