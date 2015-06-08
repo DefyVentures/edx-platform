@@ -6,10 +6,15 @@ import socket
 import subprocess
 import sys
 
+import .env
+
 VARS = {
     'GIT_BRANCH': 'defy/release',
     'OAUTH2_BASE_URL': 'http://learn.defyventures.org',
     'SUPERVISOR_GROUP': 'all',
+    'DATABASE_PASSWORD': 'TsQagBTG7rsvnJ6dNvnDyzZI',
+    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': 'nMxBnya6Zx7N2xeExxXd29X6eP4ZxWJMMRjAhx6e',
+    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': '6!mzde7FMFoH5Y?M9mfhxryFKeqAiOc5@;AtJ@kSQaM2OAx!eu32TsFdwCS5!4H1T3!anu4gdbsMmWtMsjbezHu2g;j2S63hn@NKZ0_egSIaMKq-9AzM5AXW;ApkpOHa',
 }
 
 if socket.gethostname() == 'ip-10-0-0-61':
@@ -51,8 +56,24 @@ EDXAPP_ENABLE_THIRD_PARTY_AUTH: true
 EDXAPP_THIRD_PARTY_AUTH:
     DefyVentures:
         SOCIAL_AUTH_DEFYVENTURES_OAUTH2_BASE_URL: "{OAUTH2_BASE_URL}"
-        SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY: "nMxBnya6Zx7N2xeExxXd29X6eP4ZxWJMMRjAhx6e"
-        SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET: "6!mzde7FMFoH5Y?M9mfhxryFKeqAiOc5@;AtJ@kSQaM2OAx!eu32TsFdwCS5!4H1T3!anu4gdbsMmWtMsjbezHu2g;j2S63hn@NKZ0_egSIaMKq-9AzM5AXW;ApkpOHa"
+        SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY: "{SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY}"
+        SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET: "{SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET}"
+
+EDXAPP_DATABASES:
+    default:
+        ENGINE: "django.db.backends.mysql"
+        HOST: "edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com"
+        NAME: "edxapp"
+        USER: "edxapp001"
+        PASSWORD: "{DATABASE_PASSWORD}"
+        PORT: 3306
+    read_replica:
+        ENGINE: "django.db.backends.mysql"
+        HOST: "edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com"
+        NAME: "edxapp"
+        USER: "edxapp001"
+        PASSWORD: "{DATABASE_PASSWORD}"
+        PORT: 3306
 """
     server_vars = server_vars.format(**VARS)
     with open('/edx/app/edx_ansible/server-vars.yml', 'w') as fp:
