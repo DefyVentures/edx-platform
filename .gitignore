@@ -108,4 +108,4 @@ autodeploy.properties
 dist
 
 ### Protected config vars
-env.py
+lms/envs/env.py

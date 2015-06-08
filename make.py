@@ -6,7 +6,7 @@ import socket
 import subprocess
 import sys
 
-import .env
+from openedx import env
 
 VARS = {
     'GIT_BRANCH': 'defy/release',
@@ -96,7 +96,7 @@ def build(fast=False, show=False):
             'cmd': '/edx/bin/update edx-platform {GIT_BRANCH}'.format(**VARS),
         },
         {
-            'cmd': '/edx/bin/supervisorctl restart {SUPERVISOR_GROUP}'.format(**VARS),
+            'cmd': 'sudo /edx/bin/supervisorctl restart {SUPERVISOR_GROUP}'.format(**VARS),
             'fast': True,
         },
     ]
