@@ -5,5 +5,6 @@ urlpatterns = patterns(
     'defy.views',
     url(r'^courses$', 'courses'),
     url(r'^student/progress$', 'student_progress'),
+    url(r'^logout$', 'logout_user'),
 )
 

@@ -1,7 +1,9 @@
 import json
 
-from django.http import HttpResponse
+from django.conf import settings
 from django.contrib import auth
+from django.http import HttpResponse
+from django_future.csrf import ensure_csrf_cookie
 
 import branding
 import courseware
@@ -153,4 +155,24 @@ def student_progress(request):
         })
 
     return HttpResponse(dumps(data), content_type='application/json')
+
+
+@ensure_csrf_cookie
+def logout_user(request):
+    """ This is a simplified logout view that does no redirection.
+    """
+    auth.logout(request)
+    response = HttpResponse("""<html>
+  <body>ok
+    <script>
+      document.domain = window.location.hostname.replace('courses.', '')
+      window.parent.lcms_dashboard.loggedOut('edx')
+    </script>
+  </body>
+</html>""")
+    response.delete_cookie(
+        settings.EDXMKTG_COOKIE_NAME,
+        path='/', domain=settings.SESSION_COOKIE_DOMAIN,
+    )
+    return response
 
