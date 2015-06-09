@@ -1458,7 +1458,8 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
 
     # Defy fully trusts users who have authenticated via OAuth so make thier accounts active
     # right away.
-    if third_party_auth.is_enabled() and pipeline.running(request):
+    do_defy_auth = (third_party_auth.is_enabled() and pipeline.running(request))
+    if do_defy_auth:
         post_vars = dict(post_vars.items())
         post_vars.update({
             'password': pipeline.make_random_password(),
@@ -1680,7 +1681,8 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # or external auth with bypass activated
     send_email = (
         not settings.FEATURES.get('AUTOMATIC_AUTH_FOR_TESTING') and
-        not (do_external_auth and settings.FEATURES.get('BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH'))
+        not (do_external_auth and settings.FEATURES.get('BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH')) and
+        not do_defy_auth
     )
     if send_email:
         from_address = microsite.get_value(
