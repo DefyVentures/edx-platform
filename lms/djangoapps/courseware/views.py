@@ -21,7 +21,7 @@ from django.contrib.auth.models import User, AnonymousUser
 from django.contrib.auth.decorators import login_required
 from django.utils.timezone import UTC
 from django.views.decorators.http import require_GET
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect
 from edxmako.shortcuts import render_to_response, render_to_string, marketing_link
 from django_future.csrf import ensure_csrf_cookie
@@ -347,9 +347,19 @@ def _index_bulk_op(request, course_key, chapter, section, position):
     staff_access = has_access(user, 'staff', course)
     registered = registered_for_course(course, user)
     if not registered:
-        # TODO (vshnayder): do course instructors need to be registered to see course?
-        log.debug(u'User %s tried to view course %s but is not enrolled', user, course.location.to_deprecated_string())
-        return redirect(reverse('about_course', args=[course_key.to_deprecated_string()]))
+
+        # DefyVentures auto-enroll students
+        course_id = course.scope_ids.def_id.course_key
+        if CourseMode.can_auto_enroll(course_id):
+            try:
+                CourseEnrollment.enroll(user, course_id, check_access=True)
+            except Exception:
+                return HttpResponseBadRequest(_("Could not enroll"))
+
+        else:
+            # TODO (vshnayder): do course instructors need to be registered to see course?
+            log.debug(u'User %s tried to view course %s but is not enrolled', user, course.location.to_deprecated_string())
+            return redirect(reverse('about_course', args=[course_key.to_deprecated_string()]))
 
     # see if all pre-requisites (as per the milestones app feature) have been fulfilled
     # Note that if the pre-requisite feature flag has been turned off (default) then this check will
