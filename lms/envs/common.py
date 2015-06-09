@@ -328,6 +328,9 @@ FEATURES = {
 
     # For easily adding modes to courses during acceptance testing
     'MODE_CREATION_FOR_TESTING': False,
+
+    # For DefyVentures we trust external auth
+    'BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH': True,
 }
 
 # Ignore static asset files on import which match this pattern
