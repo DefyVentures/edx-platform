@@ -32,6 +32,7 @@ Longer TODO:
 import sys
 import os
 import imp
+import socket
 
 from path import path
 from warnings import simplefilter
@@ -44,7 +45,7 @@ from lms.djangoapps.lms_xblock.mixin import LmsBlockMixin
 
 ################################### FEATURES ###################################
 # The display name of the platform to be used in templates/emails/etc.
-PLATFORM_NAME = "Your Platform Name Here"
+PLATFORM_NAME = "Defy Ventures"
 CC_MERCHANT_NAME = PLATFORM_NAME
 # Shows up in the platform footer, eg "(c) COPYRIGHT_YEAR"
 COPYRIGHT_YEAR = "2015"
@@ -446,6 +447,9 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 
     # Allows the open edX footer to be leveraged in Django Templates.
     'edxmako.shortcuts.microsite_footer_context_processor',
+
+    # Allows swapping out the edX header/footer
+    'defy.context_processors.theme',
 )
 
 # use the ratelimit backend to prevent brute force attacks
@@ -2014,5 +2018,11 @@ PDF_RECEIPT_COBRAND_LOGO_PATH = PROJECT_ROOT + '/static/images/default-theme/log
 PDF_RECEIPT_COBRAND_LOGO_HEIGHT_MM = 12
 
 # A list of client IPs that can access views decorated with @lcms_only
-DEFY_LCMS_IPS = ['10.0.0.60']
+DEFY_LCMS_IP = '10.0.0.60'
+DEFY_LCMS_BASE_URL = 'http://learn.defyventures.org'
+DEFY_CACHE_SECONDS = 60 * 5
+
+# Defy staging config
+if socket.gethostname() == 'ip-10-0-0-61':
+    DEFY_LCMS_BASE_URL = 'http://learn.defybox.org'
 

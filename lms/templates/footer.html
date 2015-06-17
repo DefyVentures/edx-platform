@@ -4,6 +4,9 @@
 <%namespace name='static' file='static_content.html'/>
 <%! from microsite_configuration.templatetags.microsite import platform_name %>
 
+% if IS_DEFY_ENABLED:
+${DEFY_FOOTER}
+% else:
 <div class="wrapper wrapper-footer">
   <footer>
     <div class="colophon">
@@ -107,3 +110,4 @@
     </div>
   </footer>
 </div>
+% endif # IS_DEFY_ENABLED

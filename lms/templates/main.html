@@ -133,6 +133,191 @@
   <link rel="stylesheet" type="text/css" href="${static.url(style_overrides_file)}" />
 % endif
 
+% if IS_DEFY_ENABLED:
+  ${DEFY_STYLES}
+  <style>
+
+    .navbar {
+      margin-bottom: 23px;
+      border: medium none;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      border-radius: 3px;
+    }
+    .nav a {
+      font-family: Helvetica;
+      color: #666;
+    }
+    .navbar-nav > li {
+      float: left;
+    }
+    .nav > li {
+      position: relative;
+      display: block;
+    }
+    .nav > li > a {
+      position: relative;
+      display: block;
+      transition: all 0.2s ease 0s;
+    }
+    .navbar-nav > li > a {
+      padding: 20.5px 15px;
+      line-height: 23px;
+      font-size: 12px;
+    }
+    .navbar-toggle {
+      position: relative;
+      float: right;
+      margin-right: 15px;
+      margin-top: 15px;
+      margin-bottom: 15px;
+      background-color: transparent;
+      background-image: none;
+      border-radius: 3px;
+      padding: 9px 10px;
+      border-color: transparent;
+      display: none;
+      box-shadow: none;
+    }
+    .navbar-toggle:active, .navbar-toggle:active:not(:disabled),
+    .navbar-toggle:hover,  .navbar-toggle:hover:not(:disabled) {
+      background-color: transparent;
+      background-image: none;
+    }
+    .navbar-nav > li > a:hover,
+    .navbar-nav > li > a:focus {
+      color: #212121;
+    }
+    .nav > li > a:hover,
+    .nav > li > a:focus {
+      text-decoration: none;
+    }
+    .navbar .sr-only {
+      display: none;
+    }
+    .navbar-nav > li > a.dash-logo {
+      padding-top: 15px;
+      padding-bottom: 15px;
+    }
+    .dash-logo img {
+      height: 34px;
+    }
+    .navbar-toggle-sm {
+      float: none;
+    }
+    .navbar-right {
+      float: right !important;
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      z-index: 1000;
+      display: none;
+      float: left;
+      min-width: 160px;
+      padding: 5px 0;
+      list-style: outside none none;
+      font-size: 13px;
+      text-align: left;
+      background-color: #fff;
+      background-clip: padding-box;
+      border: medium none;
+      border-radius: 3px;
+      border-top-right-radius: 0;
+      border-top-left-radius: 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      margin-top: 2px;
+    }
+    .dropdown-header {
+      display: block;
+      padding: 3px 20px;
+      line-height: 1.846;
+      color: #bbb;
+      white-space: nowrap;
+    }
+    .navbar-right .dropdown-menu {
+      left: auto;
+      right: 0;
+    }
+    .open > .dropdown-menu {
+      display: block;
+    }
+    .navbar-toggle .icon-bar {
+      display: block;
+      width: 22px;
+      height: 2px;
+      border-radius: 1px;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .navbar-toggle .icon-bar + .icon-bar {
+      margin-top: 4px;
+    }
+    ul.navbar-nav {
+      width: 100%;
+      position: relative;
+      left: 15px;
+    }
+    .dropdown-menu > li > a {
+      display: block;
+      padding: 3px 20px;
+      clear: both;
+      color: #666;
+      line-height: 1.846;
+      white-space: nowrap;
+    }
+    .dropdown-menu > li > a:focus,
+    .dropdown-menu > li > a:hover {
+      text-decoration: none;
+      color: #141414;
+      background-color: #eee;
+    }
+
+    @media (min-width: 768px) {
+      ul.navbar-nav {
+        width: inherit;
+        position: inherit;
+        left: 0;
+      }
+      ul.navbar-nav.collapse {
+        display: block;
+      }
+      .nav-main.tab-side {
+        display: none;
+      }
+      .navbar-right {
+        display: block;
+      }
+      .navbar-toggle-lg {
+        display: inline;
+      }
+    }
+
+    header.global {
+      border-bottom: none;
+      box-shadow: none;
+      height: auto;
+      box-sizing: border-box;
+    }
+    header.global,
+    header.global.slim {
+      padding: 15px;
+    }
+    header.global nav {
+      height: auto;
+      margin: auto;
+      padding: 0;
+      max-width: none;
+      min-width: none;
+    }
+    .dashboard {
+      padding-top: 5px;
+    }
+    .dashboard .my-courses .course {
+      z-index: 1;
+    }
+
+  </style>
+% endif
+
 </head>
 
 <body class="${dir_rtl} <%block name='bodyclass'/> lang_${LANGUAGE_CODE}">
@@ -149,7 +334,7 @@
     </div>
 
     <%block name="footer">
-      ## Can be overridden by child templates wanting to hide the footer. 
+      ## Can be overridden by child templates wanting to hide the footer.
       <%
         if theme_enabled() and not is_microsite():
           footer_file = 'theme-footer.html'

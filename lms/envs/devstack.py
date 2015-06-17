@@ -128,5 +128,6 @@ MODULESTORE = convert_module_store_setting_if_needed(MODULESTORE)
 # Defy LCMS
 
 # Restrict API access to these IPs.  Empty list will allow API traffic from all IPs.
-DEFY_LCMS_IPS = []
-
+DEFY_LCMS_IP = '10.0.2.2'
+DEFY_LCMS_BASE_URL = 'http://learn.defy.org'
+DEFY_CACHE_SECONDS = 5
