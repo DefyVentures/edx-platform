@@ -2,7 +2,7 @@ import json
 
 from django.conf import settings
 from django.contrib import auth
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django_future.csrf import ensure_csrf_cookie
 
 import branding
@@ -159,17 +159,10 @@ def student_progress(request):
 
 @ensure_csrf_cookie
 def logout_user(request):
-    """ This is a simplified logout view that does no redirection.
+    """ Log the user out and redirect them to Defy LCMS logout.
     """
     auth.logout(request)
-    response = HttpResponse("""<html>
-  <body>ok
-    <script>
-      document.domain = window.location.hostname.replace('courses.', '')
-      window.parent.lcms_dashboard.loggedOut('edx')
-    </script>
-  </body>
-</html>""")
+    response = HttpResponseRedirect(settings.DEFY_LCMS_BASE_URL + '/logout')
     response.delete_cookie(
         settings.EDXMKTG_COOKIE_NAME,
         path='/', domain=settings.SESSION_COOKIE_DOMAIN,

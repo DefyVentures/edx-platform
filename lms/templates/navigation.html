@@ -40,6 +40,8 @@ site_status_msg = get_site_status_msg(course_id)
     % if IS_DEFY_ENABLED:
       ${DEFY_NAV}
       <script>
+
+        // Enable the navbar dropdown menu
         $('html').click(function (e) {
           var $el = $(e.target)
           if ($el.closest('.navbar-toggle').length > 0) {
@@ -50,11 +52,7 @@ site_status_msg = get_site_status_msg(course_id)
             $('.dropdown').removeClass('open')
           }
         })
-        var $dropdownMenu = this.$('.dropdown-menu-right')
-        this.$('.nav-main.tab-side a').each(function () {
-          var $item = $('<li role="presentation"></li>').append($(this).clone())
-          $dropdownMenu.append($item)
-        })
+
       </script>
     % else:
     <nav>
