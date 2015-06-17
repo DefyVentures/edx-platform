@@ -2023,6 +2023,6 @@ DEFY_LCMS_BASE_URL = 'http://learn.defyventures.org'
 DEFY_CACHE_SECONDS = 60 * 5
 
 # Defy staging config
-if socket.gethostname() == 'ip-10-0-0-61':
+if socket.gethostname() == 'ip-10-0-0-63':
     DEFY_LCMS_BASE_URL = 'http://learn.defybox.org'
 

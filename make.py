@@ -17,7 +17,7 @@ VARS = {
     'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': '6!mzde7FMFoH5Y?M9mfhxryFKeqAiOc5@;AtJ@kSQaM2OAx!eu32TsFdwCS5!4H1T3!anu4gdbsMmWtMsjbezHu2g;j2S63hn@NKZ0_egSIaMKq-9AzM5AXW;ApkpOHa',
 }
 
-if socket.gethostname() == 'ip-10-0-0-61':
+if socket.gethostname() == 'ip-10-0-0-63':
     VARS.update({
         'GIT_BRANCH': 'defy/master',
         'OAUTH2_BASE_URL': 'http://learn.defybox.org',
