@@ -39,23 +39,11 @@ site_status_msg = get_site_status_msg(course_id)
   <header class="global ${"slim" if course else ""}" aria-label="${_('Global Navigation')}">
     % if IS_DEFY_ENABLED:
       ${DEFY_NAV}
-      <script>
+    % endif
 
-        // Enable the navbar dropdown menu
-        $('html').click(function (e) {
-          var $el = $(e.target)
-          if ($el.closest('.navbar-toggle').length > 0) {
-            $('.dropdown').toggleClass('open')
-            return
-          }
-          if ($el.closest('.dropdown-menu').length == 0) {
-            $('.dropdown').removeClass('open')
-          }
-        })
-
-      </script>
-    % else:
-    <nav>
+    <!-- TODO: Remove the following nav element when displaying Defy header.  Currently there is
+               a bug where ResumeWizard requires this to be in the DOM. -->
+    <nav class="hide">
     <h1 class="logo">
       <a href="${marketing_link('ROOT')}">
         <%block name="navigation_logo">
@@ -152,7 +140,6 @@ site_status_msg = get_site_status_msg(course_id)
     </ol>
     % endif
   </nav>
-  % endif # IS_DEFY_ENABLED
 </header>
 % if course:
 <!--[if lte IE 8]>

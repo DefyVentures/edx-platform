@@ -6,6 +6,29 @@
 
 % if IS_DEFY_ENABLED:
 ${DEFY_FOOTER}
+
+<script>
+
+  // Enable the navbar dropdown menu
+  $('html').click(function (e) {
+
+    var bootstrap_enabled = (typeof $().modal === 'function')
+    if (bootstrap_enabled) {
+      return
+    }
+
+    var $el = $(e.target)
+    if ($el.closest('.navbar-toggle').length > 0) {
+      $('.dropdown').toggleClass('open')
+      return
+    }
+    if ($el.closest('.dropdown-menu').length == 0) {
+      $('.dropdown').removeClass('open')
+    }
+  })
+
+</script>
+
 % else:
 <div class="wrapper wrapper-footer">
   <footer>
