@@ -7,8 +7,6 @@ import subprocess
 import sys
 import json
 
-from openedx import env
-
 required_settings = [
     'GIT_BRANCH',
     'OAUTH2_BASE_URL',
