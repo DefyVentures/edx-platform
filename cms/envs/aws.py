@@ -13,6 +13,7 @@ This is the default template for our main set of AWS servers.
 
 import json
 
+from lms.envs.common import defyenv
 from .common import *
 
 from logsettings import get_logger_config
@@ -241,7 +242,8 @@ AWS_SECRET_ACCESS_KEY = AUTH_TOKENS["AWS_SECRET_ACCESS_KEY"]
 if AWS_SECRET_ACCESS_KEY == "":
     AWS_SECRET_ACCESS_KEY = None
 
-DATABASES = AUTH_TOKENS['DATABASES']
+DATABASES = defyenv('DATABASES')
+
 MODULESTORE = convert_module_store_setting_if_needed(AUTH_TOKENS.get('MODULESTORE', MODULESTORE))
 CONTENTSTORE = AUTH_TOKENS['CONTENTSTORE']
 DOC_STORE_CONFIG = AUTH_TOKENS['DOC_STORE_CONFIG']

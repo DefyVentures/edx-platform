@@ -76,31 +76,7 @@ edx_platform_repo: "https://github.com/DefyVentures/edx-platform.git"
 edx_platform_version: "{GIT_BRANCH}"
 
 # Required by XBlock
-EDXAPP_ALLOW_ALL_ADVANCED_COMPONENTS: true
-
-# Settings for enabling and configuring third party authorization
-EDXAPP_ENABLE_THIRD_PARTY_AUTH: true
-EDXAPP_THIRD_PARTY_AUTH:
-    DefyVentures:
-        SOCIAL_AUTH_DEFYVENTURES_OAUTH2_BASE_URL: "{OAUTH2_BASE_URL}"
-        SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY: "{SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY}"
-        SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET: "{SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET}"
-
-EDXAPP_DATABASES:
-    default:
-        ENGINE: "django.db.backends.mysql"
-        HOST: "{DATABASE_HOST}"
-        NAME: "edxapp"
-        USER: "edxapp001"
-        PASSWORD: "{DATABASE_PASSWORD}"
-        PORT: 3306
-    read_replica:
-        ENGINE: "django.db.backends.mysql"
-        HOST: "{DATABASE_HOST}"
-        NAME: "edxapp"
-        USER: "edxapp001"
-        PASSWORD: "{DATABASE_PASSWORD}"
-        PORT: 3306
+#EDXAPP_ALLOW_ALL_ADVANCED_COMPONENTS: true
 """
     server_vars = server_vars.format(**settings)
     with open('/edx/app/edx_ansible/server-vars.yml', 'w') as fp:

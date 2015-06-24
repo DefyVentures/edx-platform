@@ -33,6 +33,7 @@ import sys
 import os
 import imp
 import socket
+import json
 
 from path import path
 from warnings import simplefilter
@@ -42,6 +43,93 @@ from .discussionsettings import *
 import dealer.git
 from xmodule.modulestore.modulestore_settings import update_module_store_settings
 from lms.djangoapps.lms_xblock.mixin import LmsBlockMixin
+
+
+with open('/edx/app/edxapp/defy.env.json') as defy_env_fp:
+    secret_settings = json.load(defy_env_fp)
+
+env_settings = {
+    'production': {
+        'OAUTH2_BASE_URL': 'http://learn.defyventures.org',
+        'DEFY_LCMS_IP': '10.0.0.64',
+        'DEFY_LCMS_BASE_URL': 'http://learn.defyventures.org',
+        'DATABASES': {
+            'default': {
+                'ENGINE':   'django.db.backends.mysql',
+                'HOST':     'edxapp-prod.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
+                'NAME':     'edxapp',
+                'USER':     'edxapp001',
+                'PASSWORD': secret_settings['DATABASE_PASSWORD'],
+                'PORT':     3306
+            },
+            'read_replica': {
+                'ENGINE':   'django.db.backends.mysql',
+                'HOST':     'edxapp-prod.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
+                'NAME':     'edxapp',
+                'USER':     'edxapp001',
+                'PASSWORD': secret_settings['DATABASE_PASSWORD'],
+                'PORT':     3306
+            },
+        },
+    },
+    'qa': {
+        'OAUTH2_BASE_URL': 'http://learn.defybox.org',
+        'DEFY_LCMS_IP': '10.0.0.60',
+        'DEFY_LCMS_BASE_URL': 'http://learn.defybox.org',
+        'DATABASES': {
+            'default': {
+                'ENGINE':   'django.db.backends.mysql',
+                'HOST':     'edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
+                'NAME':     'edxapp',
+                'USER':     'edxapp001',
+                'PASSWORD': secret_settings['DATABASE_PASSWORD'],
+                'PORT':     3306
+            },
+            'read_replica': {
+                'ENGINE':   'django.db.backends.mysql',
+                'HOST':     'edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
+                'NAME':     'edxapp',
+                'USER':     'edxapp001',
+                'PASSWORD': secret_settings['DATABASE_PASSWORD'],
+                'PORT':     3306
+            },
+        },
+    },
+    'local': {
+        'OAUTH2_BASE_URL': 'http://learn.defy.org',
+        'DEFY_LCMS_IP': '10.0.2.2',
+        'DEFY_LCMS_BASE_URL': 'http://learn.defy.org',
+        'DEFY_CACHE_SECONDS': 5,
+        'DATABASES': {
+            'default': {
+                'ENGINE':   'django.db.backends.mysql',
+                'HOST':     'localhost',
+                'NAME':     'edxapp',
+                'USER':     'edxapp001',
+                'PASSWORD': secret_settings['DATABASE_PASSWORD'],
+                'PORT':     3306
+            },
+            'read_replica': {
+                'ENGINE':   'django.db.backends.mysql',
+                'HOST':     'localhost',
+                'NAME':     'edxapp',
+                'USER':     'edxapp001',
+                'PASSWORD': secret_settings['DATABASE_PASSWORD'],
+                'PORT':     3306
+            },
+        },
+    }
+}
+
+env_name = secret_settings['ENV']
+defy_settings = env_settings[env_name]
+defy_settings.update(secret_settings)
+
+def defyenv(setting_name, default=None):
+    if default is not None:
+        return defy_settings.get(setting_name, default)
+    return defy_settings[setting_name]
+
 
 ################################### FEATURES ###################################
 # The display name of the platform to be used in templates/emails/etc.
@@ -261,9 +349,7 @@ FEATURES = {
     # Turn on/off Microsites feature
     'USE_MICROSITES': False,
 
-    # Turn on third-party auth. Disabled for now because full implementations are not yet available. Remember to syncdb
-    # if you enable this; we don't create tables by default.
-    'ENABLE_THIRD_PARTY_AUTH': False,
+    'ENABLE_THIRD_PARTY_AUTH': True,
 
     # Toggle to enable alternate urls for marketing links
     'ENABLE_MKTG_SITE': False,
@@ -1957,9 +2043,16 @@ for app_name in OPTIONAL_APPS:
             continue
     INSTALLED_APPS += (app_name,)
 
-# Stub for third_party_auth options.
+# third_party_auth options.
 # See common/djangoapps/third_party_auth/settings.py for configuration details.
-THIRD_PARTY_AUTH = {}
+THIRD_PARTY_AUTH = {
+    'DefyVentures': {
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_BASE_URL': defyenv('OAUTH2_BASE_URL'),
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': defyenv('SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY'),
+        'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': defyenv('SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET'),
+
+    }
+}
 
 ### ADVANCED_SECURITY_CONFIG
 # Empty by default
@@ -2018,11 +2111,7 @@ PDF_RECEIPT_COBRAND_LOGO_PATH = PROJECT_ROOT + '/static/images/default-theme/log
 PDF_RECEIPT_COBRAND_LOGO_HEIGHT_MM = 12
 
 # A list of client IPs that can access views decorated with @lcms_only
-DEFY_LCMS_IP = '10.0.0.60'
-DEFY_LCMS_BASE_URL = 'http://learn.defyventures.org'
-DEFY_CACHE_SECONDS = 60 * 5
-
-# Defy staging config
-if socket.gethostname() == 'ip-10-0-0-63':
-    DEFY_LCMS_BASE_URL = 'http://learn.defybox.org'
+DEFY_LCMS_IP = defyenv('DEFY_LCMS_IP')
+DEFY_LCMS_BASE_URL = defyenv('DEFY_LCMS_BASE_URL')
+DEFY_CACHE_SECONDS = defyenv('DEFY_CACHE_SECONDS', 60*5)
 
