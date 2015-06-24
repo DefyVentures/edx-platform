@@ -5,23 +5,50 @@ from os import environ
 import socket
 import subprocess
 import sys
+import json
 
 from openedx import env
 
-VARS = {
-    'GIT_BRANCH': 'defy/release',
-    'OAUTH2_BASE_URL': 'http://learn.defyventures.org',
-    'SUPERVISOR_GROUP': 'all',
-    'DATABASE_PASSWORD': 'TsQagBTG7rsvnJ6dNvnDyzZI',
-    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY': 'nMxBnya6Zx7N2xeExxXd29X6eP4ZxWJMMRjAhx6e',
-    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET': '6!mzde7FMFoH5Y?M9mfhxryFKeqAiOc5@;AtJ@kSQaM2OAx!eu32TsFdwCS5!4H1T3!anu4gdbsMmWtMsjbezHu2g;j2S63hn@NKZ0_egSIaMKq-9AzM5AXW;ApkpOHa',
-}
+required_settings = [
+    'GIT_BRANCH',
+    'OAUTH2_BASE_URL',
+    'DATABASE_HOST',
+    'DATABASE_PASSWORD',
+    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY',
+    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET',
+    'STACK',
+]
 
-if socket.gethostname() == 'ip-10-0-0-63':
-    VARS.update({
+env_settings = {
+    'production': {
+        'GIT_BRANCH': 'defy/release',
+        'OAUTH2_BASE_URL': 'http://learn.defyventures.org',
+        'DATABASE_HOST': 'edxapp-prod.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
+        'STACK': 'full',
+    },
+    'qa': {
         'GIT_BRANCH': 'defy/master',
         'OAUTH2_BASE_URL': 'http://learn.defybox.org',
-    })
+        'DATABASE_HOST': 'edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
+        'STACK': 'full',
+    },
+    'local': {
+        'GIT_BRANCH': 'defy/master',
+        'OAUTH2_BASE_URL': 'http://learn.defy.org',
+        'DATABASE_HOST': 'localhost',
+        'STACK': 'dev',
+    }
+}
+
+with open('/edx/app/edxapp/defy.env.json') as defy_env_fp:
+    secret_settings = json.load(defy_env_fp)
+env_name = secret_settings['ENV']
+settings = env_settings[env_name]
+settings.update(secret_settings)
+
+missing_settings = [s for s in required_settings if s not in settings]
+if len(missing_settings) > 0:
+    raise AttributeError('Missing settings: ' + missing_settings.join(', '))
 
 def run(cmd, show=False):
     if show:
@@ -36,6 +63,8 @@ def run(cmd, show=False):
 
 def run_all(cmds, fast=False, show=False):
     for options in cmds:
+        if 'stack' in options and options['stack'] != settings['STACK']:
+            continue
         if fast and not options.get('fast', False):
             continue
         if type(options['cmd']) == str:
@@ -62,42 +91,47 @@ EDXAPP_THIRD_PARTY_AUTH:
 EDXAPP_DATABASES:
     default:
         ENGINE: "django.db.backends.mysql"
-        HOST: "edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com"
+        HOST: "{DATABASE_HOST}"
         NAME: "edxapp"
         USER: "edxapp001"
         PASSWORD: "{DATABASE_PASSWORD}"
         PORT: 3306
     read_replica:
         ENGINE: "django.db.backends.mysql"
-        HOST: "edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com"
+        HOST: "{DATABASE_HOST}"
         NAME: "edxapp"
         USER: "edxapp001"
         PASSWORD: "{DATABASE_PASSWORD}"
         PORT: 3306
 """
-    server_vars = server_vars.format(**VARS)
+    server_vars = server_vars.format(**settings)
     with open('/edx/app/edx_ansible/server-vars.yml', 'w') as fp:
         fp.write(server_vars)
 
 def build(fast=False, show=False):
+    supervisor_group = 'all'
+    if fast:
+        supervisor_group = 'edxapp:'
     cmds = [
         {
             'cmd': "sudo -u edxapp find . -name '*.pyc' -delete",
             'fast': True,
         },
         {
-            'cmd': 'sudo -u edxapp git pull origin {GIT_BRANCH}'.format(**VARS),
+            'cmd': 'sudo -u edxapp git pull origin {GIT_BRANCH}'.format(**settings),
             'fast': True,
         },
         {
             'cmd': write_config,
         },
         {
-            'cmd': '/edx/bin/update edx-platform {GIT_BRANCH}'.format(**VARS),
+            'cmd': '/edx/bin/update edx-platform {GIT_BRANCH}'.format(**settings),
+            'stack': 'full',
         },
         {
-            'cmd': 'sudo /edx/bin/supervisorctl restart {SUPERVISOR_GROUP}'.format(**VARS),
+            'cmd': 'sudo /edx/bin/supervisorctl restart {0}'.format(supervisor_group),
             'fast': True,
+            'stack': 'full',
         },
     ]
     run_all(cmds, fast=fast, show=show)
@@ -112,11 +146,6 @@ def main():
         help='Just show the commands that would be run wihtout actually running them.')
     parser.add_argument('--force', action='store_true', help='Do not exit if linting fails.')
     args = parser.parse_args()
-
-    if args.fast:
-        VARS.update({
-            'SUPERVISOR_GROUP': 'edxapp:',
-        })
 
     if args.build:
         build(fast=args.fast, show=args.show)
