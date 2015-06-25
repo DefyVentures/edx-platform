@@ -7,46 +7,26 @@ import subprocess
 import sys
 import json
 
-required_settings = [
-    'GIT_BRANCH',
-    'OAUTH2_BASE_URL',
-    'DATABASE_HOST',
-    'DATABASE_PASSWORD',
-    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_KEY',
-    'SOCIAL_AUTH_DEFYVENTURES_OAUTH2_SECRET',
-    'STACK',
-]
+GIT_BRANCH = 'defy/release'
+STACK = 'full'
+RESUME_WIZARD_GIT_BRANCH = 'release'
+RESUME_WIZARD_DIR = '/edx/app/edxapp/ResumeWizard'
 
-env_settings = {
-    'production': {
-        'GIT_BRANCH': 'defy/release',
-        'OAUTH2_BASE_URL': 'http://learn.defyventures.org',
-        'DATABASE_HOST': 'edxapp-prod.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
-        'STACK': 'full',
-    },
-    'qa': {
-        'GIT_BRANCH': 'defy/master',
-        'OAUTH2_BASE_URL': 'http://learn.defybox.org',
-        'DATABASE_HOST': 'edxapp-qa.cwxas7opvqi4.us-east-1.rds.amazonaws.com',
-        'STACK': 'full',
-    },
-    'local': {
-        'GIT_BRANCH': 'defy/master',
-        'OAUTH2_BASE_URL': 'http://learn.defy.org',
-        'DATABASE_HOST': 'localhost',
-        'STACK': 'dev',
-    }
-}
+with open('/edx/app/edxapp/defy.env.json') as fp:
+    secret_settings = json.load(fp)
 
-with open('/edx/app/edxapp/defy.env.json') as defy_env_fp:
-    secret_settings = json.load(defy_env_fp)
-env_name = secret_settings['ENV']
-settings = env_settings[env_name]
-settings.update(secret_settings)
+if secret_settings['ENVIRONMENT_NAME'] == 'production':
+    pass
 
-missing_settings = [s for s in required_settings if s not in settings]
-if len(missing_settings) > 0:
-    raise AttributeError('Missing settings: ' + missing_settings.join(', '))
+if secret_settings['ENVIRONMENT_NAME'] == 'qa':
+    GIT_BRANCH = 'defy/master'
+    RESUME_WIZARD_GIT_BRANCH = 'master'
+
+if secret_settings['ENVIRONMENT_NAME'] == 'local':
+    GIT_BRANCH = 'defy/master'
+    STACK = 'dev'
+    RESUME_WIZARD_GIT_BRANCH = 'master'
+    RESUME_WIZARD_DIR = '/edx/app/edxapp/themes/ResumeWizard'
 
 def run(cmd, show=False):
     if show:
@@ -61,7 +41,7 @@ def run(cmd, show=False):
 
 def run_all(cmds, fast=False, show=False):
     for options in cmds:
-        if 'stack' in options and options['stack'] != settings['STACK']:
+        if 'stack' in options and options['stack'] != STACK:
             continue
         if fast and not options.get('fast', False):
             continue
@@ -69,18 +49,6 @@ def run_all(cmds, fast=False, show=False):
             run(options['cmd'], show=show)
         else:
             options['cmd']()
-
-def write_config():
-    server_vars = """
-edx_platform_repo: "https://github.com/DefyVentures/edx-platform.git"
-edx_platform_version: "{GIT_BRANCH}"
-
-# Required by XBlock
-#EDXAPP_ALLOW_ALL_ADVANCED_COMPONENTS: true
-"""
-    server_vars = server_vars.format(**settings)
-    with open('/edx/app/edx_ansible/server-vars.yml', 'w') as fp:
-        fp.write(server_vars)
 
 def build(fast=False, show=False):
     supervisor_group = 'all'
@@ -91,16 +59,17 @@ def build(fast=False, show=False):
             'cmd': "sudo -u edxapp find . -name '*.pyc' -delete",
             'fast': True,
         },
+        #{
+        #    'cmd': 'sudo -u edxapp git pull',
+        #    'fast': True,
+        #},
+        #{
+        #    'cmd': 'cd {0} && sudo -u edxapp git pull && cd -'.format(RESUME_WIZARD_DIR),
+        #    'fast': True,
+        #},
         {
-            'cmd': 'sudo -u edxapp git pull origin {GIT_BRANCH}'.format(**settings),
+            'cmd': 'cd {0} && sudo -u edxapp rsync -av --checksum --delete resumewizard/ /edx/app/edxapp/venvs/edxapp/lib/python2.7/site-packages/resumewizard/ && cd -'.format(RESUME_WIZARD_DIR),
             'fast': True,
-        },
-        {
-            'cmd': write_config,
-        },
-        {
-            'cmd': '/edx/bin/update edx-platform {GIT_BRANCH}'.format(**settings),
-            'stack': 'full',
         },
         {
             'cmd': 'sudo /edx/bin/supervisorctl restart {0}'.format(supervisor_group),
