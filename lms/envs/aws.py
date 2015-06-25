@@ -233,11 +233,6 @@ for app in ENV_TOKENS.get('ADDL_INSTALLED_APPS', []):
 
 ENV_FEATURES = ENV_TOKENS.get('FEATURES', ENV_TOKENS.get('MITX_FEATURES', {}))
 for feature, value in ENV_FEATURES.items():
-
-    # Override ENV_FEATURES with defyenv
-    if feature == 'ENABLE_THIRD_PARTY_AUTH':
-        continue
-
     FEATURES[feature] = value
 
 WIKI_ENABLED = ENV_TOKENS.get('WIKI_ENABLED', WIKI_ENABLED)
@@ -347,7 +342,7 @@ FILE_UPLOAD_STORAGE_PREFIX = ENV_TOKENS.get('FILE_UPLOAD_STORAGE_PREFIX', FILE_U
 
 # If there is a database called 'read_replica', you can use the use_read_replica_if_available
 # function in util/query.py, which is useful for very large database reads
-DATABASES = defyenv('DATABASES')
+DATABASES = AUTH_TOKENS['DATABASES']
 
 XQUEUE_INTERFACE = AUTH_TOKENS['XQUEUE_INTERFACE']
 
@@ -460,8 +455,7 @@ TIME_ZONE_DISPLAYED_FOR_DEADLINES = ENV_TOKENS.get("TIME_ZONE_DISPLAYED_FOR_DEAD
 X_FRAME_OPTIONS = ENV_TOKENS.get('X_FRAME_OPTIONS', X_FRAME_OPTIONS)
 
 ##### Third-party auth options ################################################
-# Uncomment to override settings with AUTH_TOKENS
-#THIRD_PARTY_AUTH = AUTH_TOKENS.get('THIRD_PARTY_AUTH', THIRD_PARTY_AUTH)
+THIRD_PARTY_AUTH = AUTH_TOKENS.get('THIRD_PARTY_AUTH', THIRD_PARTY_AUTH)
 
 ##### OAUTH2 Provider ##############
 if FEATURES.get('ENABLE_OAUTH2_PROVIDER'):
@@ -518,3 +512,25 @@ SOUTH_MIGRATION_MODULES = {
     'default': 'social.apps.django_app.default.south_migrations',
     'djcelery': 'ignore',
 }
+
+with open('/edx/app/edxapp/defy.env.json') as defy_env_fp:
+    secret_settings = json.load(defy_env_fp)
+
+def defyenv(setting_name, default=None):
+    if default is not None:
+        return secret_settings.get(setting_name, default)
+    return secret_settings[setting_name]
+
+if defyenv('ENVIRONMENT_NAME') == 'production':
+    from .defy_production import *
+if defyenv('ENVIRONMENT_NAME') == 'qa':
+    from .defy_qa import *
+if defyenv('ENVIRONMENT_NAME') == 'local':
+    from .defy_local import *
+
+THIRD_PARTY_AUTH['DefyVentures']['SOCIAL_AUTH_DEFYVENTURES_OAUTH2_BASE_URL'] = DEFY_LCMS_BASE_URL
+
+DATABASES['read_replica'] = DATABASES['default'].copy()
+
+FEATURES['ENABLE_THIRD_PARTY_AUTH'] = True
+

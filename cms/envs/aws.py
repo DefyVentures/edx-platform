@@ -13,7 +13,6 @@ This is the default template for our main set of AWS servers.
 
 import json
 
-from lms.envs.common import defyenv
 from .common import *
 
 from logsettings import get_logger_config
@@ -242,7 +241,7 @@ AWS_SECRET_ACCESS_KEY = AUTH_TOKENS["AWS_SECRET_ACCESS_KEY"]
 if AWS_SECRET_ACCESS_KEY == "":
     AWS_SECRET_ACCESS_KEY = None
 
-DATABASES = defyenv('DATABASES')
+DATABASES = AUTH_TOKENS['DATABASES']
 
 MODULESTORE = convert_module_store_setting_if_needed(AUTH_TOKENS.get('MODULESTORE', MODULESTORE))
 CONTENTSTORE = AUTH_TOKENS['CONTENTSTORE']
@@ -314,3 +313,10 @@ VIDEO_UPLOAD_PIPELINE = ENV_TOKENS.get('VIDEO_UPLOAD_PIPELINE', VIDEO_UPLOAD_PIP
 #date format the api will be formatting the datetime values
 API_DATE_FORMAT = '%Y-%m-%d'
 API_DATE_FORMAT = ENV_TOKENS.get('API_DATE_FORMAT', API_DATE_FORMAT)
+
+from lms.envs import defy
+
+DATABASES = defy.DATABASES
+
+FEATURES['ALLOW_ALL_ADVANCED_COMPONENTS'] = True
+
