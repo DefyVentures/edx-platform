@@ -109,14 +109,17 @@ def student_progress(request):
     for course in branding.get_visible_courses():
         module_id = dumps(course.scope_ids.def_id)
         courses[module_id] = course
-
     data = []
     course_modules = courseware.models.StudentModule.objects.filter(module_type='course')
+
     for course_module in course_modules:
 
         # Get detailed user progress data
         module_id = dumps(course_module.module_state_key)
-        course = courses[module_id]
+        course = courses.get(module_id)
+        if not course:
+            # TODO: log a warning that a course no longer exists
+            continue
         courseware.grades.progress_summary(course_module.student, request, course)
 
         modified = course_module.modified
