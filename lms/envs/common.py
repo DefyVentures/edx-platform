@@ -710,7 +710,9 @@ BUGS_EMAIL = 'bugs@example.com'
 UNIVERSITY_EMAIL = 'university@example.com'
 PRESS_EMAIL = 'press@example.com'
 FINANCE_EMAIL = ''
-ADMINS = ()
+ADMINS = (
+    ('Reid Ransom', 'reid+edxprod@defyventures.org'),
+)
 MANAGERS = ADMINS
 
 EDX_PLATFORM_REVISION = os.environ.get('EDX_PLATFORM_REVISION')
