@@ -5,6 +5,8 @@ from django.contrib import auth
 from django.http import HttpResponse, HttpResponseRedirect
 from django_future.csrf import ensure_csrf_cookie
 
+import pymongo
+
 import branding
 import courseware
 
@@ -74,6 +76,7 @@ def courses(request):
             'number': course.number,
             'start':  course.start,
             'end':    course.end,
+            'problems': course_problems(course.org, course.number),
         }
         about_keys = [
             'overview',
@@ -96,6 +99,24 @@ def courses(request):
         data['about'] = {key: courseware.courses.get_course_about_section(course, key) for key in about_keys}
         courses.append(data)
     return HttpResponse(dumps(courses), content_type='application/json')
+
+def course_problems(course_org, course_number):
+    """ Return a list of ids for each problem in the given course.
+    """
+    db = pymongo.MongoClient().edxapp
+    problems_cursor = db.modulestore.find({
+        '_id.org': course_org,
+        '_id.course': course_number,
+        '_id.category': 'problem',
+    })
+    problems = []
+    for problem in problems_cursor:
+        data = {
+            'name': problem['_id']['name'],
+            'definition': problem['definition']['data']['data'],
+        }
+        problems.append(data)
+    return problems
 
 def student_progress(request):
     """ Return a json response with student progress data.
