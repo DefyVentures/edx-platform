@@ -2093,7 +2093,8 @@ def spoc_gradebook(request, course_id):
 
     enrolled_students = User.objects.filter(
         courseenrollment__course_id=course_key,
-        courseenrollment__is_active=1
+        courseenrollment__is_active=1,
+        profile__isnull=False,
     ).order_by('username').select_related("profile")
 
     # possible extension: implement pagination to show to large courses
