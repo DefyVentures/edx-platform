@@ -127,6 +127,8 @@ def student_progress(request):
     data = []
     problems = []
 
+    since = request.POST.get('since')
+
     # Make courses accessible by module_id in a dict
     courses = {}
     for course in branding.get_visible_courses():
