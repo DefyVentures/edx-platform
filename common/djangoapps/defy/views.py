@@ -5,6 +5,8 @@ from django.contrib import auth
 from django.http import HttpResponse, HttpResponseRedirect
 from django_future.csrf import ensure_csrf_cookie
 
+import pymongo
+
 import branding
 import courseware
 
@@ -74,6 +76,7 @@ def courses(request):
             'number': course.number,
             'start':  course.start,
             'end':    course.end,
+            'problems': course_problems(course.org, course.number),
         }
         about_keys = [
             'overview',
@@ -97,19 +100,40 @@ def courses(request):
         courses.append(data)
     return HttpResponse(dumps(courses), content_type='application/json')
 
+def course_problems(course_org, course_number):
+    """ Return a list of ids for each problem in the given course.
+    """
+    db = pymongo.MongoClient().edxapp
+    problems_cursor = db.modulestore.find({
+        '_id.org': course_org,
+        '_id.course': course_number,
+        '_id.category': 'problem',
+    })
+    problems = []
+    for problem in problems_cursor:
+        data = {
+            'name': problem['_id']['name'],
+            'definition': problem['definition']['data']['data'],
+        }
+        problems.append(data)
+    return problems
+
 def student_progress(request):
     """ Return a json response with student progress data.
 
     TODO: This will need to be modified at some point to only return a subset of data.  Perhaps
     it get's passed a datetime `since` and only returns data that's been modified since then.
     """
+    data = []
+    problems = []
+
+    since = request.POST.get('since')
 
     # Make courses accessible by module_id in a dict
     courses = {}
     for course in branding.get_visible_courses():
         module_id = dumps(course.scope_ids.def_id)
         courses[module_id] = course
-    data = []
     course_modules = courseware.models.StudentModule.objects.filter(module_type='course')
 
     for course_module in course_modules:
@@ -118,7 +142,7 @@ def student_progress(request):
         module_id = dumps(course_module.module_state_key)
         course = courses.get(module_id)
         if not course:
-            # TODO: log a warning that a course no longer exists
+            # Course no longer exists
             continue
         courseware.grades.progress_summary(course_module.student, request, course)
 
@@ -134,30 +158,18 @@ def student_progress(request):
         )
         for problem_module in problem_modules:
             state = json.loads(problem_module.state)
-            total_problems += 1
-            if state.get('done', False):
-                completed_problems += 1
-            if problem_module.grade is not None and problem_module.max_grade is not None:
-                grade += problem_module.grade
-                max_grade += problem_module.max_grade
-            if problem_module.modified > modified:
-                modified = problem_module.modified
+            problems.append({
+                'email':      course_module.student.email,
+                'course_id':  module_id,
+                'problem_id': str(problem_module.module_state_key).split('/')[-1],
+                'attempts':   state.get('attempts', 0),
+                'done':       state.get('done', False),
+                'grade':      problem_module.grade,
+                'max_grade':  problem_module.max_grade,
+                'modified':   problem_module.modified,
+            })
 
-        data.append({
-            'email':              course_module.student.email,
-            'module_type':        course_module.module_type,
-            'module_id':          module_id,
-            'state':              json.loads(course_module.state),
-            'created':            course_module.created,
-            'modified':           modified,  # Most recent problem module modified datetime
-            'course_id':          course_module.course_id,
-            'total_problems':     total_problems,
-            'completed_problems': completed_problems,
-            'grade':              grade,
-            'max_grade':          max_grade,
-        })
-
-    return HttpResponse(dumps(data), content_type='application/json')
+    return HttpResponse(dumps(problems), content_type='application/json')
 
 
 @ensure_csrf_cookie
