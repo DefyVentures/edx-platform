@@ -4,8 +4,10 @@ from django.conf import settings
 from django.contrib import auth
 from django.http import HttpResponse, HttpResponseRedirect
 from django_future.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_exempt
 
 import pymongo
+import dateutil
 
 import branding
 import courseware
@@ -118,6 +120,8 @@ def course_problems(course_org, course_number):
         problems.append(data)
     return problems
 
+@csrf_exempt
+@lcms_only
 def student_progress(request):
     """ Return a json response with student progress data.
 
@@ -128,6 +132,8 @@ def student_progress(request):
     problems = []
 
     since = request.POST.get('since')
+    if since:
+        since = dateutil.parser.parse(since)
 
     # Make courses accessible by module_id in a dict
     courses = {}
@@ -156,6 +162,8 @@ def student_progress(request):
             student=course_module.student,
             course_id=course_module.course_id,
         )
+        if since:
+            problem_modules = problem_modules.filter(modified__gte=since)
         for problem_module in problem_modules:
             state = json.loads(problem_module.state)
             problems.append({
@@ -163,7 +171,7 @@ def student_progress(request):
                 'course_id':  module_id,
                 'problem_id': str(problem_module.module_state_key).split('/')[-1],
                 'attempts':   state.get('attempts', 0),
-                'done':       state.get('done', False),
+                'done':       state.get('done') is True,
                 'grade':      problem_module.grade,
                 'max_grade':  problem_module.max_grade,
                 'modified':   problem_module.modified,
