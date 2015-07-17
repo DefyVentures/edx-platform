@@ -711,7 +711,8 @@ UNIVERSITY_EMAIL = 'university@example.com'
 PRESS_EMAIL = 'press@example.com'
 FINANCE_EMAIL = ''
 ADMINS = (
-    ('Reid Ransom', 'reid+edxprod@defyventures.org'),
+    ('Reid Ransom', 'reid@defyventures.org'),
+    ('Pradhyo Bijja', 'pradhyo@defyventures.org'),
 )
 MANAGERS = ADMINS
 
