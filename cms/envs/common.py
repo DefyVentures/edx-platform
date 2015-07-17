@@ -146,6 +146,8 @@ FEATURES = {
 
     # Toggle course entrance exams feature
     'ENTRANCE_EXAMS': False,
+
+    'ALLOW_COURSE_RERUNS': True,
 }
 
 ENABLE_JASMINE = False
