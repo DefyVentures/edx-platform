@@ -2,8 +2,9 @@ import json
 
 from django.conf import settings
 from django.contrib import auth
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django_future.csrf import ensure_csrf_cookie
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 
 import pymongo
@@ -179,7 +180,6 @@ def student_progress(request):
 
     return HttpResponse(dumps(problems), content_type='application/json')
 
-
 @ensure_csrf_cookie
 def logout_user(request):
     """ Log the user out and redirect them to Defy LCMS logout.
@@ -191,4 +191,33 @@ def logout_user(request):
         path='/', domain=settings.SESSION_COOKIE_DOMAIN,
     )
     return response
+
+@lcms_only
+def account_info(request):
+
+    email = request.GET.get('email')
+    user_id = request.GET.get('id')
+
+    user = None
+    if email:
+        user = get_object_or_404(auth.models.User, email=email)
+    if user_id:
+        user = get_object_or_404(auth.models.User, pk=user_id)
+    if not user:
+        raise Http404
+
+    attrs = [
+        'date_joined',
+        'email',
+        'first_name',
+        'id',
+        'is_active',
+        'is_staff',
+        'is_superuser',
+        'last_login',
+        'last_name',
+        'username',
+    ]
+    data = {attr: getattr(user, attr) for attr in attrs}
+    return HttpResponse(dumps(data), content_type='application/json')
 
