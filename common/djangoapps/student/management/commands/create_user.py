@@ -87,6 +87,7 @@ class Command(TrackedCommand):
             'name': name,
             'honor_code': u'true',
             'terms_of_service': u'true',
+            'active': u'true',
         }
         # django.utils.translation.get_language() will be used to set the new
         # user's preferred language.  This line ensures that the result will
