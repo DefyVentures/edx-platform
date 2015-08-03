@@ -329,10 +329,15 @@ class ProgressTab(EnrolledOrStaffTab):
         )
 
     def can_display(self, course, settings, is_user_authenticated, is_user_staff, is_user_enrolled):
-        super_can_display = super(ProgressTab, self).can_display(
-            course, settings, is_user_authenticated, is_user_staff, is_user_enrolled
-        )
-        return super_can_display and not course.hide_progress_tab
+
+        # Hide progress tab since it only displays grade info, not completion info and the Defy
+        # LCMS only considers completion when awarding points.
+        return False
+
+        #super_can_display = super(ProgressTab, self).can_display(
+        #    course, settings, is_user_authenticated, is_user_staff, is_user_enrolled
+        #)
+        #return super_can_display and not course.hide_progress_tab
 
     @classmethod
     def validate(cls, tab_dict, raise_error=True):
