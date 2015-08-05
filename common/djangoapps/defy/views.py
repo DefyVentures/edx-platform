@@ -2,6 +2,7 @@ import json
 
 from django.conf import settings
 from django.contrib import auth
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django_future.csrf import ensure_csrf_cookie
 from django.shortcuts import get_object_or_404
@@ -56,6 +57,9 @@ class NormalizeData(object):
             self.element[key] = self.normalize(self.element[key])
             node = NormalizeData(self.element[key])
             node.execute()
+
+def json_response(data):
+    return HttpResponse(dumps(data), content_type='application/json')
 
 def dumps(data):
     """ JSON serialize any object.
@@ -141,7 +145,29 @@ def student_progress(request):
     for course in branding.get_visible_courses():
         module_id = dumps(course.scope_ids.def_id)
         courses[module_id] = course
+
     course_modules = courseware.models.StudentModule.objects.filter(module_type='course')
+    print('all course_modules: %d' % len(course_modules))
+
+    # Get only course modules that have problems modified since `since`.
+    if since:
+        student_courses = {}
+        student_problems = courseware.models.StudentModule.objects.filter(
+            module_type='problem', modified__gte=since)
+        if len(student_problems) == 0:
+            return json_response([])
+        for student_problem in student_problems:
+            key = str(student_problem.student_id) + str(student_problem.course_id)
+            student_courses[key] = {
+                'student_id': student_problem.student_id,
+                'course_id': student_problem.course_id,
+            }
+        student_course_Q = Q()
+        for kwargs in student_courses.itervalues():
+            student_course_Q = student_course_Q | Q(module_type='course', **kwargs)
+        course_modules = courseware.models.StudentModule.objects.filter(student_course_Q).distinct()
+
+    print('since course_modules: %d' % len(course_modules))
 
     for course_module in course_modules:
 
@@ -178,7 +204,7 @@ def student_progress(request):
                 'modified':   problem_module.modified,
             })
 
-    return HttpResponse(dumps(problems), content_type='application/json')
+    return json_response(problems)
 
 @ensure_csrf_cookie
 def logout_user(request):
