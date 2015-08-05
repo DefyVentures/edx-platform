@@ -147,7 +147,6 @@ def student_progress(request):
         courses[module_id] = course
 
     course_modules = courseware.models.StudentModule.objects.filter(module_type='course')
-    print('all course_modules: %d' % len(course_modules))
 
     # Get only course modules that have problems modified since `since`.
     if since:
@@ -166,8 +165,6 @@ def student_progress(request):
         for kwargs in student_courses.itervalues():
             student_course_Q = student_course_Q | Q(module_type='course', **kwargs)
         course_modules = courseware.models.StudentModule.objects.filter(student_course_Q).distinct()
-
-    print('since course_modules: %d' % len(course_modules))
 
     for course_module in course_modules:
 
