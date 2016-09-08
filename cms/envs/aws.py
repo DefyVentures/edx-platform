@@ -320,3 +320,18 @@ DATABASES = lmsaws.DATABASES
 
 FEATURES['ALLOW_ALL_ADVANCED_COMPONENTS'] = True
 
+with open('/edx/app/edxapp/defy.env.json') as defy_env_fp:
+    secret_settings = json.load(defy_env_fp)
+
+def defyenv(setting_name, default=None):
+    if default is not None:
+        return secret_settings.get(setting_name, default)
+    return secret_settings[setting_name]
+
+if defyenv('ENVIRONMENT_NAME') == 'production':
+    from .defy_production import *
+if defyenv('ENVIRONMENT_NAME') == 'qa':
+    from .defy_qa import *
+if defyenv('ENVIRONMENT_NAME') == 'local':
+    from .defy_local import *
+

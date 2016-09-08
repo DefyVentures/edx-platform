@@ -51,6 +51,8 @@ from opaque_keys.edx.keys import UsageKey, CourseKey
 from opaque_keys.edx.locator import LibraryUsageLocator
 from cms.lib.xblock.authoring_mixin import VISIBILITY_VIEW
 
+from defy.webhooks import xblock_action
+
 __all__ = [
     'orphan_handler', 'xblock_handler', 'xblock_view_handler', 'xblock_outline_handler', 'xblock_container_handler'
 ]
@@ -165,9 +167,11 @@ def xblock_handler(request, usage_key_string):
 
         elif request.method == 'DELETE':
             _delete_item(usage_key, request.user)
+            xblock_action(usage_key, 'deleted')
             return JsonResponse()
         else:  # Since we have a usage_key, we are updating an existing xblock.
-            return _save_xblock(
+            publish = request.json.get('publish')
+            response = _save_xblock(
                 request.user,
                 _get_xblock(usage_key, request.user),
                 data=request.json.get('data'),
@@ -175,8 +179,11 @@ def xblock_handler(request, usage_key_string):
                 metadata=request.json.get('metadata'),
                 nullout=request.json.get('nullout'),
                 grader_type=request.json.get('graderType'),
-                publish=request.json.get('publish'),
+                publish=publish,
             )
+            if publish:
+                xblock_action(usage_key, 'published')
+            return response
     elif request.method in ('PUT', 'POST'):
         if 'duplicate_source_locator' in request.json:
             parent_usage_key = usage_key_with_run(request.json['parent_locator'])

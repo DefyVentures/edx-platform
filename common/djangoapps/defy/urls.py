@@ -1,6 +1,6 @@
 from django.conf.urls import include, patterns, url
 
-# /api/defy/
+# /apidefy/
 urlpatterns = patterns(
     'defy.views',
     url(r'^courses$', 'courses'),
