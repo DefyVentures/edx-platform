@@ -81,6 +81,8 @@ from util.milestones_helpers import (
     is_valid_course_key
 )
 
+from defy.webhooks import send_webhook
+
 MINIMUM_GROUP_ID = 100
 
 # Note: the following content group configuration strings are not
@@ -880,10 +882,12 @@ def settings_handler(request, course_key_string):
                         delete_entrance_exam(request, course_key)
 
                 # Perform the normal update workflow for the CourseDetails model
-                return JsonResponse(
+                response = JsonResponse(
                     CourseDetails.update_from_json(course_key, request.json, request.user),
                     encoder=CourseSettingsEncoder
                 )
+                send_webhook(course_key, 'settings:update')
+                return response
 
 
 @login_required

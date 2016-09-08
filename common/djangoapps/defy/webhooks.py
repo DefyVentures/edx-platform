@@ -4,18 +4,21 @@ from django.conf import settings
 
 import requests
 
-def xblock_action(usage_key, action):
+def send_webhook(course_key, action, usage_key=None):
     """ Send a webhook to LCMS that an xblock was created, updated, or deleted.
     """
-    org, number, run = str(usage_key.course_key).split('/')
+    org, number, run = str(course_key).split('/')
+    if usage_key is not None:
+        usage_key = str(usage_key)
     data = {
         'course': {
             'org': org,
             'number': number,
             'run': run,
         },
-        'usage_key': str(usage_key),
+        'usage_key': usage_key,
         'action': action,
     }
-    requests.post(settings.DEFY_LCMS_BASE_URL + '/defyedx/xblock_action', data=json.dumps(data))
+    requests.post(settings.DEFY_LCMS_BASE_URL + '/defyedx/course_action', data=json.dumps(data),
+        headers={'X-TOKEN': settings.DEFY_AUTH_TOKEN})
 
