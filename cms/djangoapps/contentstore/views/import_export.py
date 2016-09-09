@@ -36,8 +36,10 @@ from util.views import ensure_valid_course_key
 
 from contentstore.utils import reverse_course_url, reverse_usage_url
 
+from defy.decorators import defy_token_required
 
-__all__ = ['import_handler', 'import_status_handler', 'export_handler']
+
+__all__ = ['import_handler', 'import_status_handler', 'export_handler', 'defy_export_handler']
 
 
 log = logging.getLogger(__name__)
@@ -326,11 +328,7 @@ def import_status_handler(request, course_key_string, filename=None):
 
 
 # pylint: disable=unused-argument
-@ensure_csrf_cookie
-@login_required
-@require_http_methods(("GET",))
-@ensure_valid_course_key
-def export_handler(request, course_key_string):
+def _export_handler(request, course_key_string, check_perm=True):
     """
     The restful handler for exporting a course.
 
@@ -344,9 +342,11 @@ def export_handler(request, course_key_string):
 
     If the tar.gz file has been requested but the export operation fails, an HTML page will be returned
     which describes the error.
+
+    check_perm bool Check user permissions to access course if True.
     """
     course_key = CourseKey.from_string(course_key_string)
-    if not has_course_author_access(request.user, course_key):
+    if check_perm and not has_course_author_access(request.user, course_key):
         raise PermissionDenied()
 
     course_module = modulestore().get_course(course_key)
@@ -421,3 +421,22 @@ def export_handler(request, course_key_string):
     else:
         # Only HTML or x-tgz request formats are supported (no JSON).
         return HttpResponse(status=406)
+
+
+# pylint: disable=unused-argument
+@ensure_csrf_cookie
+@login_required
+@require_http_methods(("GET",))
+@ensure_valid_course_key
+def export_handler(request, course_key_string):
+    return _export_handler(request, course_key_string)
+
+
+# pylint: disable=unused-argument
+@defy_token_required
+@require_http_methods(("GET",))
+@ensure_valid_course_key
+def defy_export_handler(request, course_key_string):
+    return _export_handler(request, course_key_string, check_perm=False)
+
+

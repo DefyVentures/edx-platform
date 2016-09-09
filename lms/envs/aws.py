@@ -521,6 +521,10 @@ def defyenv(setting_name, default=None):
         return secret_settings.get(setting_name, default)
     return secret_settings[setting_name]
 
+DEFY_AUTH_TOKEN = defyenv('DEFY_AUTH_TOKEN')
+DEFY_AUTH_TOKENS = (
+    DEFY_AUTH_TOKEN,
+)
 if defyenv('ENVIRONMENT_NAME') == 'production':
     from .defy_production import *
 if defyenv('ENVIRONMENT_NAME') == 'qa':
