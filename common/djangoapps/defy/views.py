@@ -147,10 +147,6 @@ def student_progress(request):
     data = []
     coursemods = []
 
-    since = request.POST.get('since')
-    if since:
-        since = dateutil.parser.parse(since)
-
     # Make courses accessible by module_id in a dict
     courses = {}
     for course in branding.get_visible_courses():
@@ -160,7 +156,9 @@ def student_progress(request):
     course_modules = courseware.models.StudentModule.objects.filter(module_type='course')
 
     # Get only course modules that have problems modified since `since`.
+    since = request.GET.get('since')
     if since:
+        since = dateutil.parser.parse(since)
         student_courses = {}
         student_problems = courseware.models.StudentModule.objects.filter(
             module_type='problem', modified__gte=since)
@@ -177,6 +175,17 @@ def student_progress(request):
             student_course_Q = student_course_Q | Q(module_type='course', **kwargs)
         course_modules = courseware.models.StudentModule.objects.filter(student_course_Q).distinct()
 
+    course_modules = course_modules.order_by('pk')
+
+    starting_after = request.GET.get('starting_after')
+    if starting_after:
+        course_modules = course_modules.filter(pk__gt=starting_after)
+
+    limit = int(request.GET.get('limit', '100'))
+    if limit < 1 or limit > 100:
+        limit = 100
+    course_modules = course_modules[:limit]
+
     for course_module in course_modules:
         # Get detailed user progress data
         module_id = dumps(course_module.module_state_key)
@@ -189,6 +198,7 @@ def student_progress(request):
         coursemod = {
             'email':      course_module.student.email,
             'course_id':  module_id,
+            'pk':         course_module.pk,
             'problem_mods': [],
         }
 
