@@ -14,6 +14,8 @@ import dateutil
 import branding
 import courseware
 
+from defy.decorators import defy_token_required
+
 from .decorators import lcms_only
 
 
@@ -70,6 +72,15 @@ def dumps(data):
         return json.dumps(norm.element)
     except TypeError:
         return unicode(norm.element)
+
+@defy_token_required
+def course_ids(request):
+    """ Returns a full list of course ids.
+    """
+    data = {
+        'course_ids': [course.scope_ids.def_id for course in branding.get_visible_courses()],
+    }
+    return HttpResponse(dumps(data), content_type='application/json')
 
 @lcms_only
 def courses(request):
@@ -134,7 +145,7 @@ def student_progress(request):
     it get's passed a datetime `since` and only returns data that's been modified since then.
     """
     data = []
-    problems = []
+    coursemods = []
 
     since = request.POST.get('since')
     if since:
@@ -167,7 +178,6 @@ def student_progress(request):
         course_modules = courseware.models.StudentModule.objects.filter(student_course_Q).distinct()
 
     for course_module in course_modules:
-
         # Get detailed user progress data
         module_id = dumps(course_module.module_state_key)
         course = courses.get(module_id)
@@ -176,7 +186,12 @@ def student_progress(request):
             continue
         courseware.grades.progress_summary(course_module.student, request, course)
 
-        modified = course_module.modified
+        coursemod = {
+            'email':      course_module.student.email,
+            'course_id':  module_id,
+            'problem_mods': [],
+        }
+
         total_problems = 0
         completed_problems = 0
         grade = 0
@@ -186,11 +201,12 @@ def student_progress(request):
             student=course_module.student,
             course_id=course_module.course_id,
         )
-        if since:
-            problem_modules = problem_modules.filter(modified__gte=since)
+        course_modified = None
+        course_grade = 0
+        course_max_grade = 0
         for problem_module in problem_modules:
             state = json.loads(problem_module.state)
-            problems.append({
+            coursemod['problem_mods'].append({
                 'email':      course_module.student.email,
                 'course_id':  module_id,
                 'problem_id': str(problem_module.module_state_key).split('/')[-1],
@@ -199,9 +215,19 @@ def student_progress(request):
                 'grade':      problem_module.grade,
                 'max_grade':  problem_module.max_grade,
                 'modified':   problem_module.modified,
+                'state':      state,
             })
+            if course_modified is None or course_modified < problem_module.modified:
+                course_modified = problem_module.modified
+            if problem_module.grade is not None:
+                course_grade += problem_module.grade
+                course_max_grade += problem_module.max_grade
+        coursemod['modified'] = course_modified
+        coursemod['grade'] = course_grade
+        coursemod['max_grade'] = course_max_grade
+        coursemods.append(coursemod)
 
-    return json_response(problems)
+    return json_response(coursemods)
 
 @ensure_csrf_cookie
 def logout_user(request):

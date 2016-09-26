@@ -7,11 +7,15 @@ import requests
 def send_webhook(course_key, action, usage_key=None):
     """ Send a webhook to LCMS that an xblock was created, updated, or deleted.
     """
-    org, number, run = str(course_key).split('/')
+    try:
+        org, number, run = str(course_key).split(':', 1)[1].split('+', 2)
+    except ValueError, IndexError:
+        org, number, run = str(course_key).split('/')
     if usage_key is not None:
         usage_key = str(usage_key)
     data = {
         'course': {
+            'key': str(course_key),
             'org': org,
             'number': number,
             'run': run,
