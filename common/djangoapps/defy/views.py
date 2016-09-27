@@ -190,10 +190,6 @@ def student_progress(request):
         # Get detailed user progress data
         module_id = dumps(course_module.module_state_key)
         course = courses.get(module_id)
-        if not course:
-            # Course no longer exists
-            continue
-        courseware.grades.progress_summary(course_module.student, request, course)
 
         coursemod = {
             'email':      course_module.student.email,
@@ -201,6 +197,13 @@ def student_progress(request):
             'pk':         course_module.pk,
             'problem_mods': [],
         }
+
+        if not course:
+            # Course no longer exists
+            coursemods.append(coursemod)
+            continue
+
+        courseware.grades.progress_summary(course_module.student, request, course)
 
         total_problems = 0
         completed_problems = 0
