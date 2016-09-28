@@ -26,5 +26,5 @@ def send_webhook(course_key, action, usage_key=None):
         'action': action,
     }
     requests.post(settings.DEFY_LCMS_BASE_URL + '/defyedx/course_action', data=json.dumps(data),
-        headers={'X-TOKEN': settings.DEFY_AUTH_TOKEN})
+        headers={'X-TOKEN': settings.DEFY_AUTH_TOKEN}, verify=False)
 
