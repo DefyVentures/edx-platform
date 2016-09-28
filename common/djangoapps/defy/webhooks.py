@@ -9,7 +9,9 @@ def send_webhook(course_key, action, usage_key=None):
     """
     try:
         org, number, run = str(course_key).split(':', 1)[1].split('+', 2)
-    except ValueError, IndexError:
+    except ValueError:
+        org, number, run = str(course_key).split('/')
+    except IndexError:
         org, number, run = str(course_key).split('/')
     if usage_key is not None:
         usage_key = str(usage_key)
