@@ -136,13 +136,8 @@ def course_problems(course_org, course_number):
         problems.append(data)
     return problems
 
-@csrf_exempt
-@lcms_only
-def student_progress(request):
+def _student_progress(request):
     """ Return a json response with student progress data.
-
-    TODO: This will need to be modified at some point to only return a subset of data.  Perhaps
-    it get's passed a datetime `since` and only returns data that's been modified since then.
     """
     data = []
     coursemods = []
@@ -192,6 +187,7 @@ def student_progress(request):
         course = courses.get(module_id)
 
         coursemod = {
+            'student_pk': course_module.student.pk,
             'email':      course_module.student.email,
             'course_id':  module_id,
             'pk':         course_module.pk,
@@ -241,6 +237,15 @@ def student_progress(request):
         coursemods.append(coursemod)
 
     return json_response(coursemods)
+
+@csrf_exempt
+@lcms_only
+def student_progress(request):
+    return _student_progress(request)
+
+@defy_token_required
+def course_modules(request):
+    return _student_progress(request)
 
 @ensure_csrf_cookie
 def logout_user(request):

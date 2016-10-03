@@ -1459,8 +1459,8 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # Defy fully trusts users who have authenticated via OAuth so make thier accounts active
     # right away.
     do_defy_auth = (third_party_auth.is_enabled() and pipeline.running(request))
+    post_vars = dict(post_vars.items())
     if do_defy_auth:
-        post_vars = dict(post_vars.items())
         post_vars.update({
             'password': pipeline.make_random_password(),
             'active':   True,
