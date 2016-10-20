@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.conf import settings
 from django.contrib import auth
@@ -258,6 +259,17 @@ def logout_user(request):
         path='/', domain=settings.SESSION_COOKIE_DOMAIN,
     )
     return response
+
+@csrf_exempt
+@defy_token_required
+def change_email(request):
+    user_pk = request.POST['user_pk']
+    email = request.POST['email']
+    user = get_object_or_404(auth.models.User, pk=user_pk)
+    user.email = email
+    user.username = re.sub('[^a-zA-Z0-9]', '', email.replace('@', 'AT'))
+    user.save()
+    return HttpResponse()
 
 @lcms_only
 def account_info(request):

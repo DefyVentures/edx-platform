@@ -9,5 +9,6 @@ urlpatterns = patterns(
     url(r'^course_modules$', 'course_modules'),
     url(r'^logout$', 'logout_user'),
     url(r'^account_info$', 'account_info'),
+    url(r'^change_email$', 'change_email'),
 )
 
