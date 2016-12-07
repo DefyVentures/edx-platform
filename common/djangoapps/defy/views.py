@@ -14,6 +14,7 @@ import dateutil
 
 import branding
 import courseware
+from student.models import CourseAccessRole
 
 from defy.decorators import defy_token_required
 
@@ -80,6 +81,16 @@ def course_ids(request):
     """
     data = {
         'course_ids': [course.scope_ids.def_id for course in branding.get_visible_courses()],
+    }
+    return HttpResponse(dumps(data), content_type='application/json')
+
+@defy_token_required
+def archived_course_ids(request):
+    """ Returns a full list of course access roles.
+    """
+    archived = CourseAccessRole.objects.filter(user__email__startswith='archive@')
+    data = {
+        'archived_course_ids': list(set([str(role.course_id) for role in archived])),
     }
     return HttpResponse(dumps(data), content_type='application/json')
 
