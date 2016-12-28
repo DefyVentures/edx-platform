@@ -94,7 +94,7 @@ def archived_course_ids(request):
     }
     return HttpResponse(dumps(data), content_type='application/json')
 
-@lcms_only
+@defy_token_required
 def courses(request):
     """ Returns a json response with course data.
     """
