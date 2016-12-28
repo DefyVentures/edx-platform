@@ -282,7 +282,7 @@ def change_email(request):
     user.save()
     return HttpResponse()
 
-@lcms_only
+@defy_token_required
 def account_info(request):
 
     email = request.GET.get('email')
