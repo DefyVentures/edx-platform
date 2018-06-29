@@ -24,7 +24,7 @@ def _defy_blocks(email):
     templates.
     """
     url = settings.DEFY_LCMS_BASE_URL + '/accounts/dashboard'
-    r = requests.get(url, params={'email': email})
+    r = requests.get(url, params={'email': email}, verify=False)
     html_parts = r.text.split('<!--defylcms-')
     re_part = re.compile('start:(\w+)-->')
     ctx = {}
